@@ -168,16 +168,11 @@ CurlClient::Get(const string & uri, const Authorization & auth, bool follow_loca
     return false;
   }
 
-  if (uri == "http://www.מגנטים-לאירוע.co.il/") {
-    cerr << "malformed uri\n";
-    return false;
-  }
-
-  string ascii_uri = encodeIDN(uri);
-  if (ascii_uri.empty()) {
-    cerr << "failed to convert url " << uri << endl;
-    assert(0);
-  }
+  // string ascii_uri = encodeIDN(uri);
+  // if (ascii_uri.empty()) {
+  //   cerr << "failed to convert url " << uri << endl;
+  //   assert(0);
+  // }
   
   struct curl_slist * headers = 0;
 
@@ -212,9 +207,8 @@ CurlClient::Get(const string & uri, const Authorization & auth, bool follow_loca
     curl_easy_setopt(curl, CURLOPT_USERPWD, s.c_str());
   }
     
-  curl_easy_setopt(curl, CURLOPT_URL, ascii_uri.c_str());
+  curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
   
-  // cerr << "requesting uri " << uri << endl;
   CURLcode res = curl_easy_perform(curl);
 
   if (headers) {
