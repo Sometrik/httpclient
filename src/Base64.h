@@ -3,6 +3,8 @@
 
 #define MAX_LINE_LENGTH 76
 
+#include <string>
+
 class Base64 {
  public:
   static std::string encode(const std::string & input, const char * indent = 0, int max_line_length = MAX_LINE_LENGTH) { return encode((const unsigned char *)input.data(), input.size(), indent, max_line_length); }
