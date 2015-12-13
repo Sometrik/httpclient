@@ -60,9 +60,7 @@ class URI {
 
   void urldecodeAll();
   static std::string urlencode(const std::string & str, bool spaces_as_plus = false);
-  static std::string urlencode(const ustring & str, bool spaces_as_plus = false);
   static std::string urlencodeUtf8(const std::string & str);
-  
   static std::string urldecode(const std::string & str);
 
  private:
