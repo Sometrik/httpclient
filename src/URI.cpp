@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cassert>
+#include <cstring>
 
 #include "FNV.h"
 #include "utf8.h"
@@ -339,7 +340,7 @@ URI::setQueryString(const map<string, string> & pairs) {
 
 string
 URI::getReducedDomain() const {
-  string d = StringUtils::toLower(domain);
+  string d = toLower(domain);
   if (d.compare(0, 4, "www.") == 0) {
     return d.substr(4);
   } else if (d.size() >= 5 && d.compare(0, 3, "www") && isdigit(d[3]) && d[4] == '.') {
@@ -427,6 +428,16 @@ URI::replaceFragmentInPlace() {
   }
 }
 
+static char to_hex_digit(int n) {
+  if (n >= 0 && n <= 9) {
+    return (char)('0' + n);
+  } else if (n >= 10 && n <= 15) {
+    return (char)('A' + n - 10);
+  } else {
+    return 0;
+  }
+}
+
 string
 URI::urlencodeUtf8(const string & str) {
   string output;
@@ -460,6 +471,18 @@ URI::urlencode(const string & str, bool spaces_as_plus) {
     // no plus allowed here, hexletters must be upcase
   }
   return output;
+}
+
+static int get_xdigit(char c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  } else if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
+  } else if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  } else {
+    return 0;
+  }
 }
 
 string
