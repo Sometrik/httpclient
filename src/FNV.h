@@ -1,6 +1,8 @@
 #ifndef _FNV_H_
 #define _FNV_H_
 
+#include <string>
+
 class FNV {
  public:
   static long long calcFNV1a_64(const void * ptr, size_t len);
