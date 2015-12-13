@@ -11,7 +11,12 @@
 
 class HTTPClient {
  public:
-  HTTPClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) { }
+  HTTPClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
+    : interface_name(_interface),
+    user_agent(_user_agent),
+    enable_cookies(_enable_cookies),
+    enable_keepalive(_enable_keepalive)
+    { }  
   HTTPClient(const HTTPClient & other)
     : interface_name(other.interface_name),
     user_agent(other.user_agent),
@@ -88,10 +93,10 @@ class HTTPClient {
   std::string data_in, data_out;
   HTTPClientInterface * callback = 0;
   std::string redirect_url;
-  std::string cookie_jar;
-  bool enable_cookies, enable_keepalive;
   std::string interface_name;
   std::string user_agent;
+  std::string cookie_jar;
+  bool enable_cookies, enable_keepalive;
   int result_code = 0;
   std::string errortext;
 };
