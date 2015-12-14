@@ -12,8 +12,15 @@ class HTTPResponse {
  HTTPResponse(int _result_code, const std::string & _error_text, const std::string & _redirect_url, const std::string & _content)
    : result_code(_result_code), error_text(_error_text), redirect_url(_redirect_url), content(_content) { }
   
-  bool isSuccess() const { return result_code == 200; }
-  bool isError() const { return result_code != 200; }
+  bool isSuccess() const {
+    return
+      result_code == 200 ||
+      result_code == 301 ||
+      result_code == 302 ||
+      result_code == 303 ||
+      result_code == 307;
+  }
+  bool isError() const { return !isSuccess(); }
 
   const std::string & getContent() { return content; }
   const std::string & getErrorText() { return error_text; }
