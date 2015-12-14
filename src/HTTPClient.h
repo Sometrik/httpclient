@@ -18,7 +18,8 @@ class HTTPClient {
     enable_keepalive(_enable_keepalive)
     { }  
   HTTPClient(const HTTPClient & other)
-    : interface_name(other.interface_name),
+    : callback(other.callback),
+    interface_name(other.interface_name),
     user_agent(other.user_agent),
     cookie_jar(other.cookie_jar),
     enable_cookies(other.enable_cookies),
@@ -29,6 +30,7 @@ class HTTPClient {
   
   HTTPClient & operator=(const HTTPClient & other) {
     if (this != &other) {
+      callback = other.callback;
       interface_name = other.interface_name;
       user_agent = other.user_agent;
       cookie_jar = other.cookie_jar;
