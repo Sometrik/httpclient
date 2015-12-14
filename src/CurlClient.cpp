@@ -48,10 +48,6 @@ CurlClient::initialize() {
     data_out.shrink_to_fit();
   } else {
     curl = curl_easy_init();
-    if (enable_cookies) {
-      curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
-    }
-    // curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, 10);
   }
   
   assert(curl);
@@ -78,10 +74,14 @@ CurlClient::initialize() {
       curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
       curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
     }
-    if (cookie_jar.size()) {
+    if (!cookie_jar.empty()) {
       curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
       curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
+    } else if (enable_cookies) {
+      curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
     }
+    // curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, 10);
+
   }
 
   return curl != 0;
@@ -89,7 +89,7 @@ CurlClient::initialize() {
 
 HTTPResponse
 CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
-  if (uri.empty()) {
+  if (req.getURI().empty()) {
     return HTTPResponse(0, "empty URI");
   }
   if (!initialize()) {
@@ -139,14 +139,17 @@ CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
     headers = curl_slist_append(headers, s.c_str());
   }
   
+  if (req.getType() == HTTPRequest::POST) {
+    curl_easy_setopt(curl, CURLOPT_POST, 1);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_out.data());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data_out.size());
+  } else {
+    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+  }
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, req.getFollowLocation());
   curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-  if (request.getType() == HTTPRequest::POST) {
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_out.data());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data_out.size());
-  }
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
   if (!cookie_jar.empty()) {
     curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
     curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
