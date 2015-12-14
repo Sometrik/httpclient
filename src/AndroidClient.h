@@ -6,6 +6,7 @@
 #include "HTTPResponse.h"
 #include "HTTPClientInterface.h"
 #include "HTTPClient.h"
+#include <jni.h>
 
 #include <map>
 #include <string>
@@ -14,12 +15,22 @@ class AndroidClient : public HTTPClient {
  public:
 
 
-	AndroidClient() : HTTPClient(interface, userAgent, cookieEnable, keepaliveEnable){
+	AndroidClient(JNIEnv * _env) : HTTPClient(interface, userAgent, cookieEnable, keepaliveEnable){
 
+
+		androidInit();
+	}
+
+	void androidInit(){
+
+		jclass cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
+		jmethodID clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 
 	}
 
   HTTPResponse request(const HTTPRequest & req, const Authorization & auth){
+
+
 
 
   }
@@ -38,6 +49,7 @@ class AndroidClient : public HTTPClient {
 	std::string userAgent;
 	bool cookieEnable;
 	bool keepaliveEnable;
+  JNIEnv * env;
 
 
 };
