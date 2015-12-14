@@ -38,67 +38,59 @@ class HTTPClient {
     return *this;
   }
   
-  bool Post(const std::string & uri, const std::string & data) {
-    return Post(uri, data, Authorization::noAuth);
+  HTTPResponse Post(const std::string & uri, const std::string & data) {
+    HTTPRequest req(HTTPRequest::POST, uri);
+    req.setContent(data);
+    req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
+    return request(req, Authorization::noAuth);
   }
 
-  bool Get(const std::string & uri, const std::string & data, const Authorization & auth, bool follow_location = true, int timeout = 0) {
+  HTTPResponse Post(const std::string & uri, const std::string & data, const Authorization & auth) {
+    HTTPRequest req(HTTPRequest::POST, uri);
+    req.setContent(data);
+    req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
+    return request(req, auth);
+  }
+  
+  HTTPResponse Get(const std::string & uri, const std::string & data, const Authorization & auth, bool follow_location = true, int timeout = 0) {
     std::string uri2 = uri;
     uri2 += '?';
     uri2 += data;
-    return Get(uri2, auth, follow_location, timeout);
+    HTTPRequest req(HTTPRequest::GET, uri2);
+    req.setFollowLocation(follow_location);
+    req.setTimeout(timeout);
+    return request(req, auth);
   }
   
-  bool Get(const std::string & uri, bool follow_location = true, int timeout = 0) {
-    return Get(uri, Authorization::noAuth, follow_location, timeout);
+  HTTPResponse Get(const std::string & uri, bool follow_location = true, int timeout = 0) {
+    HTTPRequest req(HTTPRequest::GET, uri);
+    req.setFollowLocation(follow_location);
+    req.setTimeout(timeout);
+    return request(req, Authorization::noAuth);
   }
-
-  virtual bool Post(const std::string & uri, const std::string & data, const Authorization & auth) = 0;
-  virtual bool Get(const std::string & uri, const Authorization & auth, bool follow_location = true, int timeout = 0) = 0;
-
-  void addHeader(const char * name, const char * value) {
-    header_map[name] = value;
+  
+  HTTPResponse Get(const std::string & uri, const Authorization & auth, bool follow_location = true, int timeout = 0) {
+    HTTPRequest req(HTTPRequest::GET, uri);
+    req.setFollowLocation(follow_location);
+    req.setTimeout(timeout);
+    return request(req, auth);
   }
-
-  bool doRequest(const HTTPRequest & req) {
-    if (req.getType() == HTTPRequest::GET) {
-      return Get(req.getURI());
-    } else {
-      return Post(req.getURI(), req.getData());
-    }
-  }
-
-  const char * getResultData() { return data_in.c_str(); }
-  const std::string & getResultString() const { return data_in; }
-
-  const char * getErrorText() { return errortext.c_str(); }
-  int getResultCode() const { return result_code; }
-  size_t getResultDataLength() const { return data_in.size(); }
 
   void setCookieJar(const std::string & filename) { cookie_jar = filename; }
-  virtual void clearCookies() = 0;
-
   void setCallback(HTTPClientInterface * _callback) { callback = _callback; }
-  
-  const std::string & getRedirectUrl() const { return redirect_url; }
-  
- protected:
-  virtual bool initialize() {
-    result_code = 0;
-    redirect_url.clear();
-    return true;
-  }
 
-  std::map<std::string, std::string> header_map;
-  std::string data_in, data_out;
+  virtual HTTPResponse request(const HTTPRequest & req, const Authorization & auth) = 0;
+  virtual void clearCookies() = 0;
+        
+ protected:
+  virtual bool initialize() { return true; }
+
+  std::string data_out, data_in;
   HTTPClientInterface * callback = 0;
-  std::string redirect_url;
   std::string interface_name;
   std::string user_agent;
   std::string cookie_jar;
   bool enable_cookies, enable_keepalive;
-  int result_code = 0;
-  std::string errortext;
 };
 
 #endif

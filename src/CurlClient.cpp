@@ -87,85 +87,13 @@ CurlClient::initialize() {
   return curl != 0;
 }
 
-bool
-CurlClient::Post(const string & uri, const string & data, const Authorization & auth) {
-  if (!initialize()) {
-    return false;
-  }
-  data_out = data;
-
-  struct curl_slist * headers = 0;
-  headers = curl_slist_append(headers, "Content-type: application/x-www-form-urlencoded;charset=UTF-8");
-
-  string auth_header = auth.createHeader();
-  if (auth_header.size()) {
-    string s = auth.getHeaderName();
-    s += ": ";
-    s += auth_header;
-    // cerr << "POST oauth header = " << s << endl;
-    // cerr << "body = " << data << endl;
-    headers = curl_slist_append(headers, s.c_str());
-  }
-
-  if (header_map.size()) {
-    for (map<string, string>::iterator it = header_map.begin(); it != header_map.end(); it++) {
-      string s = it->first;
-      s += ": ";
-      s += it->second;
-      headers = curl_slist_append(headers, s.c_str());
-    }
-  }
-
-  const BasicAuth * basic = dynamic_cast<const BasicAuth *>(&auth);
-  if (basic) {
-    string s = basic->getUsername();
-    s += ':';
-    s += basic->getPassword();
-    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-    curl_easy_setopt(curl, CURLOPT_USERPWD, s.c_str());
-  }
-  
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-  curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_out.data());
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data_out.size());
-  if (cookie_jar.size()) {
-    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
-    curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
-  }
-
-  CURLcode res = curl_easy_perform(curl);
-
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);
-  curl_slist_free_all(headers);
-  
-  unsigned long a;
-  if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &a) == CURLE_OK) {
-    result_code = a;
-  } else {
-    assert(0);
-  }  
-  bool r = false;
-  if (res == 0) {
-    errortext = "No error";
-    r = true;
-  } else {
-    const char * str = curl_easy_strerror(res);
-    errortext = str;  
-  }
-  return r;
-}
-
-bool
-CurlClient::Get(const string & uri, const Authorization & auth, bool follow_location, int timeout) {
+HTTPResponse
+CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
   if (uri.empty()) {
-    assert(0);
-    return false;
+    return HTTPResponse(0, "empty URI");
   }
   if (!initialize()) {
-    cerr << "failed to initialize\n";
-    return false;
+    return HTTPResponse(0, "Unable to initialize client");
   }
 
   // string ascii_uri = encodeIDN(uri);
@@ -175,29 +103,18 @@ CurlClient::Get(const string & uri, const Authorization & auth, bool follow_loca
   // }
   
   struct curl_slist * headers = 0;
+  if (req.getType() == HTTPRequest::POST) {
+    data_out = req.getContent();
 
-  string auth_header = auth.createHeader();
-  if (auth_header.size()) {
-    string s = auth.getHeaderName();
-    s += ": ";
-    s += auth_header;
-    // cerr << "GET oauth header = " << s << endl;
-    headers = curl_slist_append(headers, s.c_str());
-  }
-
-  if (header_map.size()) {
-    for (map<string, string>::iterator it = header_map.begin(); it != header_map.end(); it++) {
-      string s = it->first;
-      s += ": ";
-      s += it->second;
-      headers = curl_slist_append(headers, s.c_str());
+    if (!req.getContentType().empty()) {
+      string h = "Content-type: ";
+      h += req.getContentType();
+      headers = curl_slist_append(headers, h.c_str());
     }
+  } else {
+    data_out.clear();
   }
 
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-  
   const BasicAuth * basic = dynamic_cast<const BasicAuth *>(&auth);
   if (basic) {
     string s = basic->getUsername();
@@ -205,40 +122,64 @@ CurlClient::Get(const string & uri, const Authorization & auth, bool follow_loca
     s += basic->getPassword();
     curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
     curl_easy_setopt(curl, CURLOPT_USERPWD, s.c_str());
+  } else {
+    string auth_header = auth.createHeader();
+    if (!auth_header.empty()) {
+      string s = auth.getHeaderName();
+      s += ": ";
+      s += auth_header;
+      headers = curl_slist_append(headers, s.c_str());
+    }
   }
-    
-  curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
+
+  for (auto & hd : req.getHeaders()) {
+    string s = hd.first;
+    s += ": ";
+    s += hd.second;
+    headers = curl_slist_append(headers, s.c_str());
+  }
   
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, req.getFollowLocation());
+  curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+  if (request.getType() == HTTPRequest::POST) {
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data_out.data());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data_out.size());
+  }
+  if (!cookie_jar.empty()) {
+    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
+    curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
+  }
+
   CURLcode res = curl_easy_perform(curl);
+  int result_code = 0;
+  string redirect_url;
+  string error_text;
+  if (res == 0) {
+    unsigned long a = 0;
+    if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &a) == CURLE_OK) {
+      result_code = a;
+    }
+    if (!req.getFollowLocation()) {
+      char * ptr = 0;
+      curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &ptr);
+      if (ptr) {
+	redirect_url = ptr;
+      }
+    }
+  } else {
+    error_text = curl_easy_strerror(res);
+  }
 
   if (headers) {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);
     curl_slist_free_all(headers);
   }
-
-  if (res == 0) {
-    unsigned long a;
-    if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &a) == CURLE_OK) {
-      result_code = a;
-    } else {
-      assert(0);
-    }  
-    
-    char * ptr = 0;
-    curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &ptr);
-    if (ptr) {
-      redirect_url = ptr;
-    } else {
-      redirect_url = "";
-    }
-    
-    errortext = "No error";
-    return true;
-  } else {
-    const char * str = curl_easy_strerror(res);
-    errortext = str;    
-    return false;
-  }
+  
+  HTTPResponse response(result_code, error_text, redirect_url, data_in);
+  data_in.clear();
+  return response;
 }
 
 bool

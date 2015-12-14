@@ -13,8 +13,7 @@ class CurlClient : public HTTPClient {
   ~CurlClient();
   CurlClient & operator=(const CurlClient & other);
 
-  bool Post(const std::string & uri, const std::string & data, const Authorization & auth) override;
-  bool Get(const std::string & uri, const Authorization & auth, bool follow_location = true, int timeout = 0) override;
+  HTTPResponse request(const HTTPRequest & req, const Authorization & auth) override;
 
   void clearCookies() override;
 
