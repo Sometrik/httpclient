@@ -23,8 +23,8 @@ class AndroidClient : public HTTPClient {
 
 	void androidInit(){
 
-		jclass cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
-		jmethodID clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
+		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 
 	}
 
@@ -37,6 +37,7 @@ class AndroidClient : public HTTPClient {
 
   void clearCookies() {
 
+  	env->CallVoidMethod(cookieManagerClass, clearCookiesMethod);
 
   }
 
@@ -49,7 +50,10 @@ class AndroidClient : public HTTPClient {
 	std::string userAgent;
 	bool cookieEnable;
 	bool keepaliveEnable;
+
   JNIEnv * env;
+  jclass cookieManagerClass;
+  jmethodID clearCookiesMethod;
 
 
 };
