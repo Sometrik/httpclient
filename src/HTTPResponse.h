@@ -11,16 +11,11 @@ class HTTPResponse {
    : result_code(_result_code), error_text(_error_text) { }
  HTTPResponse(int _result_code, const std::string & _error_text, const std::string & _redirect_url, const std::string & _content)
    : result_code(_result_code), error_text(_error_text), redirect_url(_redirect_url), content(_content) { }
-  
-  bool isSuccess() const {
-    return
-      result_code == 200 ||
-      result_code == 301 ||
-      result_code == 302 ||
-      result_code == 303 ||
-      result_code == 307;
-  }
-  bool isError() const { return !isSuccess(); }
+
+  bool isInfo() const { return result_code >= 100 && result_code <= 199; }
+  bool isSuccess() const { return result_code >= 200 && result_code <= 299; }
+  bool isError() const { return result_code == 0 || (result_code >= 400 && result_code <= 599); }
+  bool isRedirect() const { return result_code >= 300 && result_code <= 399; }
 
   const std::string & getContent() { return content; }
   const std::string & getErrorText() { return error_text; }
