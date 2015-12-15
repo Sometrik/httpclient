@@ -34,6 +34,7 @@ class AndroidClient : public HTTPClient {
 		setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
 		connectMethod = env->GetMethodID(httpClass, "connect", "()V");
 		getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
+		getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 
 		initDone = true;
@@ -66,9 +67,13 @@ class AndroidClient : public HTTPClient {
 			break;
 		}
 
-		int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
-		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+		//Brings out exception, if URL is bad --- needs exception handling
+			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
+			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
+		if (responseCode >= 400 && responseCode <= 599){
+			jobject errorMessage = env->CallObjectMethod(connection, getResponseMessageMethod);
+		}
 
 		return HTTPResponse();
   }
@@ -103,6 +108,7 @@ class AndroidClient : public HTTPClient {
   jmethodID setDoInputMethod;
   jmethodID connectMethod;
   jmethodID getResponseCodeMethod;
+  jmethodID getResponseMessageMethod;
 
 
 };
