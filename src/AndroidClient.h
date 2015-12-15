@@ -26,6 +26,7 @@ class AndroidClient : public HTTPClient {
 		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
 		httpClass = env->FindClass("java/net/HttpURLConnection");
 		urlClass = env->FindClass("java/net/URL");
+		authorizationClass = env->FindClass("java/net/URL");
 
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
@@ -35,6 +36,7 @@ class AndroidClient : public HTTPClient {
 		connectMethod = env->GetMethodID(httpClass, "connect", "()V");
 		getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
 		getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
+		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 
 		initDone = true;
@@ -50,6 +52,7 @@ class AndroidClient : public HTTPClient {
   		androidInit();
   	}
 
+
   	jobject url = env->NewObject(urlClass, urlConstructor, env->NewStringUTF(req.getURI().c_str()));
   	//jobject url = env->NewObject(urlClass, urlConstructor, "sometrik.com");
 
@@ -57,6 +60,8 @@ class AndroidClient : public HTTPClient {
   	jobject connection = env->CallObjectMethod(url, openConnectionMethod);
   	//jobject httpConnection = firstConnection.jcast(firstConnection, "java/net/HttpURLConnection", JNI_FALSE, JNI_FALSE);
 
+  	//Authorization example
+		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
 
 		switch (req.getType()) {
 		case HTTPRequest::POST:
@@ -67,7 +72,7 @@ class AndroidClient : public HTTPClient {
 			break;
 		}
 
-		//Brings out exception, if URL is bad --- needs exception handling
+		//Brings out exception, if URL is bad --- needs exception handling or something
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
@@ -77,6 +82,9 @@ class AndroidClient : public HTTPClient {
 
 		return HTTPResponse();
   }
+
+
+
 
   void clearCookies() {
 
@@ -109,7 +117,7 @@ class AndroidClient : public HTTPClient {
   jmethodID connectMethod;
   jmethodID getResponseCodeMethod;
   jmethodID getResponseMessageMethod;
-
+  jmethodID setRequestPropertyMethod;
 
 };
 
