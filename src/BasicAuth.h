@@ -1,6 +1,8 @@
 #ifndef _BASICAUTH_H_
 #define _BASICAUTH_H_
 
+#include "Base64.h"
+
 class BasicAuth : public Authorization {
  public:
   BasicAuth(const std::string & _username, const std::string & _password) : username(_username), password(_password) { }
