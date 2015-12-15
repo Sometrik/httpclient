@@ -55,9 +55,7 @@ class AndroidClient : public HTTPClient {
   	jobject url = env->NewObject(urlClass, urlConstructor, env->NewStringUTF(req.getURI().c_str()));
   	//jobject url = env->NewObject(urlClass, urlConstructor, "sometrik.com");
 
-  	//This would normally be casted. How?
   	jobject connection = env->CallObjectMethod(url, openConnectionMethod);
-  	//jobject httpConnection = firstConnection.jcast(firstConnection, "java/net/HttpURLConnection", JNI_FALSE, JNI_FALSE);
 
   	//Authorization example
 		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
@@ -71,15 +69,20 @@ class AndroidClient : public HTTPClient {
 			break;
 		}
 
-		//Brings out exception, if URL is bad --- needs exception handling or something
+		//Brings out exception, if URL is bad --- needs exception (IOExcpetion) handling or something
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
+		//Is this fine?
+			const char *errorMessage = "";
+
 		if (responseCode >= 400 && responseCode <= 599){
-			jobject errorMessage = env->CallObjectMethod(connection, getResponseMessageMethod);
+			jstring javaMessage = (jstring)env->CallObjectMethod(connection, getResponseMessageMethod);
+			errorMessage = env->GetStringUTFChars(javaMessage, 0);
+
 		}
 
-		return HTTPResponse();
+		return HTTPResponse(responseCode, errorMessage);
   }
 
 
