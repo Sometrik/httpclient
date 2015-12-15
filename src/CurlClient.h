@@ -33,4 +33,12 @@ class CurlClient : public HTTPClient {
   CURL * curl = 0;
 };
 
+class CurlClientFactory {
+ public:
+  CurlClientFactory() { }
+  virtual ~CurlClientFactory() { }
+
+  virtual std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) { return std::make_shared<CurlClient>("", _user_agent, _enable_cookies, _enable_keepalive); }
+};
+
 #endif
