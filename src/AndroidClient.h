@@ -15,7 +15,8 @@ class AndroidClient : public HTTPClient {
 
 	AndroidClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive): HTTPClient("", _user_agent, _enable_cookies, _enable_keepalive) {
 
-		androidInit();
+
+
 	}
 
 	void androidInit(){
@@ -33,9 +34,15 @@ class AndroidClient : public HTTPClient {
 		getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode ", "()I");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 
+		initDone = true;
+
 	}
 
   HTTPResponse request(const HTTPRequest & req, const Authorization & auth){
+
+  	if (!initDone){
+  		androidInit();
+  	}
 
   	jobject url = env->NewObject(urlClass, urlConstructor, env->NewStringUTF(req.getURI().c_str()));
   	//jobject url = env->NewObject(urlClass, urlConstructor, "sometrik.com");
@@ -75,6 +82,7 @@ class AndroidClient : public HTTPClient {
 	std::string userAgent;
 	bool cookieEnable;
 	bool keepaliveEnable;
+	bool initDone = false;
 
   JNIEnv * env;
   jclass cookieManagerClass;
