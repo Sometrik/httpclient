@@ -60,6 +60,17 @@ class AndroidClient : public HTTPClient {
   	//Authorization example
 		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
 
+		//  std::string auth_header = auth.createHeader();
+
+		// if (!auth_header.empty()) {
+		//		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
+		//}
+
+
+
+
+		//Set Follow enabled
+
 		switch (req.getType()) {
 		case HTTPRequest::POST:
 		  	env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
@@ -71,6 +82,11 @@ class AndroidClient : public HTTPClient {
 
 		//Brings out exception, if URL is bad --- needs exception (IOExcpetion) handling or something
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
+
+			if (env->ExceptionCheck()) {
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "FUCK!");
+			  return HTTPResponse(0, "Exception");
+			}
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
 		//Is this fine?
@@ -82,7 +98,18 @@ class AndroidClient : public HTTPClient {
 
 		}
 
-		return HTTPResponse(responseCode, errorMessage);
+		// stream
+		if (callback) {
+			while ( 1 ) {
+				  // lue streamia
+					callback->handleChunk(0, 0);
+			}
+  		return HTTPResponse(responseCode, errorMessage);
+		} else {
+			// lue koko stream
+			std::string content;
+			return HTTPResponse(responseCode, errorMessage, "", content);
+		}
   }
 
 
