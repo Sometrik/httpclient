@@ -42,8 +42,6 @@ CurlClient::~CurlClient() {
 
 bool
 CurlClient::initialize() {
-  HTTPClient::initialize();
-
   if (curl) {
     curl_easy_reset(curl);
     data_in.clear();
