@@ -11,15 +11,13 @@
 
 class HTTPClient {
  public:
-  HTTPClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
-    : interface_name(_interface),
-    user_agent(_user_agent),
+  HTTPClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
+    : user_agent(_user_agent),
     enable_cookies(_enable_cookies),
     enable_keepalive(_enable_keepalive)
     { }  
   HTTPClient(const HTTPClient & other)
     : callback(other.callback),
-    interface_name(other.interface_name),
     user_agent(other.user_agent),
     cookie_jar(other.cookie_jar),
     enable_cookies(other.enable_cookies),
@@ -31,7 +29,6 @@ class HTTPClient {
   HTTPClient & operator=(const HTTPClient & other) {
     if (this != &other) {
       callback = other.callback;
-      interface_name = other.interface_name;
       user_agent = other.user_agent;
       cookie_jar = other.cookie_jar;
       enable_cookies = other.enable_cookies;
@@ -85,11 +82,8 @@ class HTTPClient {
   virtual void clearCookies() = 0;
         
  protected:
-  virtual bool initialize() { return true; }
-
   std::string data_out, data_in;
   HTTPClientInterface * callback = 0;
-  std::string interface_name;
   std::string user_agent;
   std::string cookie_jar;
   bool enable_cookies, enable_keepalive;
