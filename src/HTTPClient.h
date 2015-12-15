@@ -8,6 +8,7 @@
 
 #include <map>
 #include <string>
+#include <memory>
 
 class HTTPClient {
  public:
