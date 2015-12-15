@@ -1,5 +1,7 @@
 #include "CurlClient.h"
 
+#include "BasicAuth.h"
+
 #include <cstdio>
 #include <cstring>
 #include <cassert>
@@ -8,22 +10,24 @@
 
 using namespace std;
 
-// CurlClient::CurlClient() { }
-
 CurlClient::CurlClient(const string & _interface,  const string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
-  : HTTPClient(_interface, _user_agent, _enable_cookies, _enable_keepalive)    
+  : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
+    interface_name(_interface)
 {
   
 }
 
 CurlClient::CurlClient(const CurlClient & other)
-  : HTTPClient(other)
+  : HTTPClient(other),
+    interface_name(other.interface_name)
 {
-}
   
+}
+
 CurlClient &
 CurlClient::operator=(const CurlClient & other) {
   if (this != &other) {
+    interface_name = other.interface_name;
     if (curl) {
       curl_easy_cleanup(curl);
       curl = 0;
