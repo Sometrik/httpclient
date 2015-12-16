@@ -146,4 +146,14 @@ class AndroidClient : public HTTPClient {
 
 };
 
+class AndroidClientFactory : public HTTPClientFactory {
+ public:
+ AndroidClientFactory(JNIEnv * _env) : env(_env) { }
+
+  std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) override { return std::make_shared<AndroidClient>(env, _user_agent, _enable_cookies, _enable_keepalive); }
+
+ private:
+  JNIEnv * env;
+};
+
 #endif
