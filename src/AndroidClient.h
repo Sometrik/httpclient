@@ -1,14 +1,9 @@
 #ifndef _ANDROIDCLIENT_H_
 #define _ANDROIDCLIENT_H_
 
-#include "HTTPRequest.h"
-#include "HTTPResponse.h"
-#include "HTTPClientInterface.h"
 #include "HTTPClient.h"
-#include <jni.h>
 
-#include <map>
-#include <string>
+#include <jni.h>
 
 class AndroidClient : public HTTPClient {
  public:
