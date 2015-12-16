@@ -126,10 +126,6 @@ class AndroidClient : public HTTPClient {
 
 
  private:
-	std::string interfaceName;
-	std::string userAgent;
-	bool cookieEnable;
-	bool keepaliveEnable;
 	bool initDone = false;
 
   JNIEnv * env;
