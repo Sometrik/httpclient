@@ -14,7 +14,7 @@ class AndroidClient : public HTTPClient {
  public:
 
 	AndroidClient(JNIEnv * _env, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
- : HTTPClient("", _user_agent, _enable_cookies, _enable_keepalive), env(_env) {
+ : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), env(_env) {
 
 
 		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "AndroidClient Constructor called");
@@ -89,7 +89,7 @@ class AndroidClient : public HTTPClient {
 			}
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
-		//Is this fine?
+
 			const char *errorMessage = "";
 
 		if (responseCode >= 400 && responseCode <= 599){
