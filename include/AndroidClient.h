@@ -53,7 +53,7 @@ class AndroidClient : public HTTPClient {
   	jobject connection = env->CallObjectMethod(url, openConnectionMethod);
 
   	//Authorization example
-		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
+		//env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
 
 		//  std::string auth_header = auth.createHeader();
 
@@ -79,8 +79,10 @@ class AndroidClient : public HTTPClient {
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
 			if (env->ExceptionCheck()) {
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "FUCK!");
-			  return HTTPResponse(0, "Exception");
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "AndroidClient connection error");
+			   env->ExceptionClear();
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+			  return HTTPResponse(0, "exception");
 			}
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
