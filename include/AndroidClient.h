@@ -21,9 +21,13 @@ class AndroidClient : public HTTPClient {
 		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
 		httpClass = env->FindClass("java/net/HttpURLConnection");
 		urlClass = env->FindClass("java/net/URL");
-		outputStreamClass = env->FindClass("java/net/URL");
+		outputStreamClass = env->FindClass("java.io.ByteArrayOutputStream");
+		factoryClass = env->FindClass("android/graphics/BitmapFactory");
+		bitmapClass = env->FindClass("android/graphics/Bitmap");
 
 
+
+		factoryDecodeMethod = env->GetStaticMethodID(factoryClass, "decodeStream", "(Ljava/io/InputStream;)Landroid/graphics/Bitmap;");
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
 		setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
@@ -64,11 +68,7 @@ class AndroidClient : public HTTPClient {
 		//		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
 		//}
 
-
-
-
 		//Set Follow enabled
-
 		switch (req.getType()) {
 		case HTTPRequest::POST:
 		  	env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
@@ -82,7 +82,6 @@ class AndroidClient : public HTTPClient {
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
 			if (env->ExceptionCheck()) {
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "AndroidClient connection error");
 			   env->ExceptionClear();
 				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 			  return HTTPResponse(0, "exception");
@@ -112,6 +111,21 @@ class AndroidClient : public HTTPClient {
 		}
   }
 
+  void loadImage(){
+
+  	//Image Load
+  	jobject output = env->NewObject(outputStreamClass, outputStreamConstructor);
+
+  	//This is what we want to do
+  	// InputStream input = connection.getInputStream();
+  	//       Bitmap myBitmap = BitmapFactory.decodeStream(input);
+
+  	//ByteArrayOutputStream stream = new ByteArrayOutputStream();
+  	//bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
+  	//byte[] byteArray = stream.toByteArray();
+
+  }
+
 
 
 
@@ -130,9 +144,11 @@ class AndroidClient : public HTTPClient {
 
   JNIEnv * env;
   jclass cookieManagerClass;
-  jcLass outputStreamClass;
+  jclass outputStreamClass;
   jmethodID clearCookiesMethod;
 
+  jclass bitmapClass;
+  jclass factoryClass;
   jclass httpClass;
   jclass urlClass;
   jmethodID urlConstructor;
@@ -145,6 +161,7 @@ class AndroidClient : public HTTPClient {
   jmethodID getResponseMessageMethod;
   jmethodID setRequestPropertyMethod;
   jmethodID outputStreamConstructor;
+  jmethodID factoryDecodeMethod;
 
 };
 
