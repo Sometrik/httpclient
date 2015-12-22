@@ -21,11 +21,16 @@ class AndroidClient : public HTTPClient {
 		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
 		httpClass = env->FindClass("java/net/HttpURLConnection");
 		urlClass = env->FindClass("java/net/URL");
-		outputStreamClass = env->FindClass("java.io.ByteArrayOutputStream");
-		inputStreamClass = env->FindClass("java.io.ByteArrayInputStream");
+	 	bufferedReaderClass = env->FindClass("java/io/BufferedReader");
+	 	inputStreamReaderClass = env->FindClass("java/io/InputStreamReader");
 
 
 
+		getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+	 	readerCloseMethod = env->GetMethodID(bufferedReaderClass, "close", "()V");
+	 	readLineMethod = env->GetMethodID(bufferedReaderClass, "readLine", "()Ljava/lang/String;");
+	 	inputStreamReaderConstructor = env->GetMethodID(inputStreamReaderClass, "<init>", "(Ljava/io/InputStream;)V");
+	 	bufferedReaderConstructor = env->GetMethodID(bufferedReaderClass, "<init>", "(Ljava/io/Reader;)V");
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
 		setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
@@ -129,15 +134,14 @@ class AndroidClient : public HTTPClient {
 
   JNIEnv * env;
   jclass cookieManagerClass;
-  jclass outputStreamClass;
-  jclass inputStreamClass;
-  jclass compressMethod;
   jmethodID clearCookiesMethod;
 
   jclass bitmapClass;
   jclass factoryClass;
   jclass httpClass;
   jclass urlClass;
+  jclass bufferedReaderClass;
+  jclass inputStreamReaderClass;
   jmethodID urlConstructor;
   jmethodID openConnectionMethod;
   jmethodID setRequestProperty;
@@ -150,6 +154,10 @@ class AndroidClient : public HTTPClient {
   jmethodID outputStreamConstructor;
   jmethodID factoryDecodeMethod;
   jmethodID getInputStreamMethod;
+  jmethodID bufferedReaderConstructor;
+  jmethodID inputStreamReaderConstructor;
+  jmethodID readLineMethod;
+  jmethodID readerCloseMethod;
 
 };
 
