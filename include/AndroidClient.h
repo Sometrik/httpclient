@@ -21,6 +21,8 @@ class AndroidClient : public HTTPClient {
 		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
 		httpClass = env->FindClass("java/net/HttpURLConnection");
 		urlClass = env->FindClass("java/net/URL");
+		outputStreamClass = env->FindClass("java/net/URL");
+
 
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
@@ -32,6 +34,7 @@ class AndroidClient : public HTTPClient {
 		getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
 		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+		outputStreamConstructor =  env->GetMethodID(outputStreamClass, "<init>", "()V");
 
 		initDone = true;
 
@@ -127,6 +130,7 @@ class AndroidClient : public HTTPClient {
 
   JNIEnv * env;
   jclass cookieManagerClass;
+  jcLass outputStreamClass;
   jmethodID clearCookiesMethod;
 
   jclass httpClass;
@@ -140,6 +144,7 @@ class AndroidClient : public HTTPClient {
   jmethodID getResponseCodeMethod;
   jmethodID getResponseMessageMethod;
   jmethodID setRequestPropertyMethod;
+  jmethodID outputStreamConstructor;
 
 };
 
