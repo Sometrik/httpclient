@@ -23,12 +23,14 @@ class AndroidClient : public HTTPClient {
 		urlClass = env->FindClass("java/net/URL");
 	 	bufferedReaderClass = env->FindClass("java/io/BufferedReader");
 	 	inputStreamReaderClass = env->FindClass("java/io/InputStreamReader");
+	 	inputStreamClass = env->FindClass("java/io/InputStream");
 
 
 
 		getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
 	 	readerCloseMethod = env->GetMethodID(bufferedReaderClass, "close", "()V");
 	 	readLineMethod = env->GetMethodID(bufferedReaderClass, "readLine", "()Ljava/lang/String;");
+	 	readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
 	 	inputStreamReaderConstructor = env->GetMethodID(inputStreamReaderClass, "<init>", "(Ljava/io/InputStream;)V");
 	 	bufferedReaderConstructor = env->GetMethodID(bufferedReaderClass, "<init>", "(Ljava/io/Reader;)V");
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
@@ -110,24 +112,28 @@ class AndroidClient : public HTTPClient {
   		return HTTPResponse(responseCode, errorMessage);
 		} else {
 			// lue koko stream
-			jobject input = env->NewObject(inputStreamReaderClass, inputStreamReaderConstructor, env->CallObjectMethod(httpClass, getInputStreamMethod));
-		jobject reader = env->NewObject(bufferedReaderClass, bufferedReaderConstructor, input);
+			jobject input = env->NewObject(inputStreamReaderClass, inputStreamReaderConstructor, env->CallObjectMethod(connection, getInputStreamMethod));
+		//jobject reader = env->NewObject(bufferedReaderClass, bufferedReaderConstructor, input);
 
 
-			std::string content;
-			jstring inputLine;
-		//	while ((inputLine = (jstring)env->CallObjectMethod(reader, readLineMethod)) != NULL){
+		jbyteArray array = env->NewByteArray(4096);
+		int n = -1;
+	//	env->SetByteArrayRegion(array, 0, 4096, data)
+		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "this ain't...");
 
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "this ain't...");
-				//	content += env->GetStringUTFChars(inputLine, 0);
-		//	}
+
+		std::string content;
+
+
+		while ((n = env->CallIntMethod(input, readMethod, array)) != -1){
+
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", " stream =  %i", n);
+			//		content += env->GetStringUTFChars((jstring)inputLine, 0);
+		}
 
 			return HTTPResponse(responseCode, errorMessage, "", content);
 		}
   }
-
-
-
 
   void clearCookies() {
 
@@ -152,6 +158,7 @@ class AndroidClient : public HTTPClient {
   jclass urlClass;
   jclass bufferedReaderClass;
   jclass inputStreamReaderClass;
+  jclass inputStreamClass;
   jmethodID urlConstructor;
   jmethodID openConnectionMethod;
   jmethodID setRequestProperty;
@@ -168,6 +175,7 @@ class AndroidClient : public HTTPClient {
   jmethodID inputStreamReaderConstructor;
   jmethodID readLineMethod;
   jmethodID readerCloseMethod;
+  jmethodID readMethod;
 
 };
 
