@@ -41,7 +41,6 @@ class AndroidClient : public HTTPClient {
 		getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
 		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
-		outputStreamConstructor =  env->GetMethodID(outputStreamClass, "<init>", "()V");
 		getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
 
 		initDone = true;
@@ -111,7 +110,18 @@ class AndroidClient : public HTTPClient {
   		return HTTPResponse(responseCode, errorMessage);
 		} else {
 			// lue koko stream
+			jobject input = env->NewObject(inputStreamReaderClass, inputStreamReaderConstructor, env->CallObjectMethod(httpClass, getInputStreamMethod));
+		jobject reader = env->NewObject(bufferedReaderClass, bufferedReaderConstructor, input);
+
+
 			std::string content;
+			jstring inputLine;
+		//	while ((inputLine = (jstring)env->CallObjectMethod(reader, readLineMethod)) != NULL){
+
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "this ain't...");
+				//	content += env->GetStringUTFChars(inputLine, 0);
+		//	}
+
 			return HTTPResponse(responseCode, errorMessage, "", content);
 		}
   }
