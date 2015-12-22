@@ -68,6 +68,8 @@ class AndroidClient : public HTTPClient {
 		//		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
 		//}
 
+  	loadImage(connection);
+
 		//Set Follow enabled
 		switch (req.getType()) {
 		case HTTPRequest::POST:
@@ -111,10 +113,11 @@ class AndroidClient : public HTTPClient {
 		}
   }
 
-  void loadImage(){
+  void loadImage(jobject Connection){
 
   	//Image Load
   	jobject output = env->NewObject(outputStreamClass, outputStreamConstructor);
+  	//jobject input
 
   	//This is what we want to do
   	// InputStream input = connection.getInputStream();
