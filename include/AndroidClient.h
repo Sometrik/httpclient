@@ -21,7 +21,18 @@ class AndroidClient : public HTTPClient {
 		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
 		httpClass = env->FindClass("java/net/HttpURLConnection");
 		urlClass = env->FindClass("java/net/URL");
+	 	bufferedReaderClass = env->FindClass("java/io/BufferedReader");
+	 	inputStreamReaderClass = env->FindClass("java/io/InputStreamReader");
+	 	inputStreamClass = env->FindClass("java/io/InputStream");
 
+
+
+		getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+	 	readerCloseMethod = env->GetMethodID(bufferedReaderClass, "close", "()V");
+	 	readLineMethod = env->GetMethodID(bufferedReaderClass, "readLine", "()Ljava/lang/String;");
+	 	readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
+	 	inputStreamReaderConstructor = env->GetMethodID(inputStreamReaderClass, "<init>", "(Ljava/io/InputStream;)V");
+	 	bufferedReaderConstructor = env->GetMethodID(bufferedReaderClass, "<init>", "(Ljava/io/Reader;)V");
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
 		setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
@@ -32,6 +43,7 @@ class AndroidClient : public HTTPClient {
 		getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
 		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+		getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
 
 		initDone = true;
 
@@ -62,10 +74,7 @@ class AndroidClient : public HTTPClient {
 		//}
 
 
-
-
 		//Set Follow enabled
-
 		switch (req.getType()) {
 		case HTTPRequest::POST:
 		  	env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
@@ -79,7 +88,6 @@ class AndroidClient : public HTTPClient {
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
 			if (env->ExceptionCheck()) {
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "AndroidClient connection error");
 			   env->ExceptionClear();
 				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 			  return HTTPResponse(0, "exception");
@@ -104,13 +112,28 @@ class AndroidClient : public HTTPClient {
   		return HTTPResponse(responseCode, errorMessage);
 		} else {
 			// lue koko stream
-			std::string content;
+			jobject input = env->NewObject(inputStreamReaderClass, inputStreamReaderConstructor, env->CallObjectMethod(connection, getInputStreamMethod));
+		//jobject reader = env->NewObject(bufferedReaderClass, bufferedReaderConstructor, input);
+
+
+		jbyteArray array = env->NewByteArray(4096);
+		int n = -1;
+	//	env->SetByteArrayRegion(array, 0, 4096, data)
+		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "this ain't...");
+
+
+		std::string content;
+
+
+		while ((n = env->CallIntMethod(input, readMethod, array)) != -1){
+
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", " stream =  %i", n);
+			//		content += env->GetStringUTFChars((jstring)inputLine, 0);
+		}
+
 			return HTTPResponse(responseCode, errorMessage, "", content);
 		}
   }
-
-
-
 
   void clearCookies() {
 
@@ -129,8 +152,13 @@ class AndroidClient : public HTTPClient {
   jclass cookieManagerClass;
   jmethodID clearCookiesMethod;
 
+  jclass bitmapClass;
+  jclass factoryClass;
   jclass httpClass;
   jclass urlClass;
+  jclass bufferedReaderClass;
+  jclass inputStreamReaderClass;
+  jclass inputStreamClass;
   jmethodID urlConstructor;
   jmethodID openConnectionMethod;
   jmethodID setRequestProperty;
@@ -140,6 +168,14 @@ class AndroidClient : public HTTPClient {
   jmethodID getResponseCodeMethod;
   jmethodID getResponseMessageMethod;
   jmethodID setRequestPropertyMethod;
+  jmethodID outputStreamConstructor;
+  jmethodID factoryDecodeMethod;
+  jmethodID getInputStreamMethod;
+  jmethodID bufferedReaderConstructor;
+  jmethodID inputStreamReaderConstructor;
+  jmethodID readLineMethod;
+  jmethodID readerCloseMethod;
+  jmethodID readMethod;
 
 };
 
