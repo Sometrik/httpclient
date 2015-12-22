@@ -1,2 +1,2 @@
 # httpclient
-Wrapper for different HTTP clients such as libcurl or Android HttpURLConnection
+A C++ wrapper for different HTTP clients such as libcurl, Android HttpURLConnection and iOS NSMutableURLRequest.
