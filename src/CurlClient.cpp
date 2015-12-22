@@ -24,18 +24,6 @@ CurlClient::CurlClient(const CurlClient & other)
   
 }
 
-CurlClient &
-CurlClient::operator=(const CurlClient & other) {
-  if (this != &other) {
-    interface_name = other.interface_name;
-    if (curl) {
-      curl_easy_cleanup(curl);
-      curl = 0;
-    }
-  }
-  return *this;
-}
-
 CurlClient::~CurlClient() {
   if (curl) curl_easy_cleanup(curl);
 }
