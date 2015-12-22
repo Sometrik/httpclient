@@ -27,17 +27,8 @@ class HTTPClient {
       }
   virtual ~HTTPClient() { }
   
-  HTTPClient & operator=(const HTTPClient & other) {
-    if (this != &other) {
-      callback = other.callback;
-      user_agent = other.user_agent;
-      cookie_jar = other.cookie_jar;
-      enable_cookies = other.enable_cookies;
-      enable_keepalive = other.enable_keepalive;
-    }
-    return *this;
-  }
-  
+  HTTPClient & operator=(const HTTPClient & other) = delete;
+    
   HTTPResponse Post(const std::string & uri, const std::string & data) {
     HTTPRequest req(HTTPRequest::POST, uri);
     req.setContent(data);

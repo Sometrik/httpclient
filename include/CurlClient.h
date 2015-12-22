@@ -10,7 +10,6 @@ class CurlClient : public HTTPClient {
   CurlClient(const std::string & _interface, const std::string & _user_agent, bool enable_cookies = true, bool enable_keepalive = true);
   CurlClient(const CurlClient & other);
   ~CurlClient();
-  CurlClient & operator=(const CurlClient & other);
 
   HTTPResponse request(const HTTPRequest & req, const Authorization & auth) override;
 
@@ -37,7 +36,7 @@ class CurlClientFactory : public HTTPClientFactory {
  public:
   CurlClientFactory() { }
 
-  virtual std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) { return std::make_shared<CurlClient>("", _user_agent, _enable_cookies, _enable_keepalive); }
+  std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) { return std::make_shared<CurlClient>("", _user_agent, _enable_cookies, _enable_keepalive); }
 };
 
 #endif
