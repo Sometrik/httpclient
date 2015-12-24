@@ -86,7 +86,7 @@ class HTTPClientFactory {
   HTTPClientFactory() { }
   virtual ~HTTPClientFactory() { }
 
-  virtual std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) = 0;
+  virtual std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true) = 0;
 };
 
 #endif
