@@ -10,6 +10,32 @@
 
 using namespace std;
 
+#include <curl/curl.h>
+
+class CurlClient : public HTTPClient {
+ public:
+  CurlClient(const std::string & _interface, const std::string & _user_agent, bool enable_cookies = true, bool enable_keepalive = true);
+  CurlClient(const CurlClient & other);
+  ~CurlClient();
+
+  HTTPResponse request(const HTTPRequest & req, const Authorization & auth) override;
+
+  void clearCookies() override;
+  
+ protected:
+  bool initialize();
+
+ private:
+  bool addToData(size_t len, const char * data);
+  bool handleProgress(double dltotal, double dlnow, double ultotal, double ulnow);
+
+  static size_t write_data_func(void * buffer, size_t size, size_t nmemb, void *userp);
+  static int progress_func(void *  clientp, double dltotal, double dlnow, double ultotal, double ulnow);
+
+  std::string interface_name;
+  CURL * curl = 0;
+};
+
 CurlClient::CurlClient(const string & _interface,  const string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
   : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
     interface_name(_interface)
@@ -276,7 +302,19 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
 void
-CurlClient::globalInit() {
+CurlClient::clearCookies() {
+  if (curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, "ALL");
+  }
+}
+
+std::shared_ptr<HTTPClient>
+CurlClientFactory::createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
+  return std::make_shared<CurlClient>("", _user_agent, _enable_cookies, _enable_keepalive);
+}
+
+void
+CurlClientFactory::globalInit() {
 #ifndef __APPLE__
 #if 0
   gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -297,17 +335,9 @@ CurlClient::globalInit() {
 }
 
 void
-CurlClient::clearCookies() {
-  if (curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, "ALL");
-  }
-}
-
-void
-CurlClient::globalCleanup() {
+CurlClientFactory::globalCleanup() {
   curl_global_cleanup();
 #ifndef __APPLE__
   kill_locks();
 #endif
 }
-
