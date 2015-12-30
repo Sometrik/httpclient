@@ -23,8 +23,6 @@ class AndroidClient : public HTTPClient {
 	 	inputStreamClass = env->FindClass("java/io/InputStream");
 
 
-
-		//getInputStreamMethod = env->GetMethodID(env->FindClass("java/net/URLConnection"), "getInputStream", "()Ljava/io/InputStream;");
 	 	readerCloseMethod = env->GetMethodID(bufferedReaderClass, "close", "()V");
 	 	readLineMethod = env->GetMethodID(bufferedReaderClass, "readLine", "()Ljava/lang/String;");
 	 	readMethod = env->GetMethodID(inputStreamClass, "read", "()I");
@@ -82,8 +80,6 @@ class AndroidClient : public HTTPClient {
 			break;
 		}
 
-
-		//Brings out exception, if URL is bad --- needs exception (IOExcpetion) handling or something
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
 			if (env->ExceptionCheck()) {
@@ -102,44 +98,31 @@ class AndroidClient : public HTTPClient {
 
 		}
 
-		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "going to else");
-		// stream
-		if (callback) {
-			while ( 1 ) {
-				  // lue streamia
-					callback->handleChunk(0, 0);
-			}
-  		return HTTPResponse(responseCode, errorMessage);
-		} else {
-			// lue koko stream
+		jobject input = env->CallObjectMethod(connection, getInputStreamMethod);
+		env->ExceptionClear();
 
-			jobject input = env->CallObjectMethod(connection, getInputStreamMethod);
-			env->ExceptionClear();
+		jmethodID blaah = env->GetMethodID(inputStreamClass, "read", "([B)I");
+		jbyteArray array = env->NewByteArray(4096);
+		int g = 0;
+		std::string content;
 
-			jmethodID blaah = env->GetMethodID(inputStreamClass, "read", "([B)I");
-			jbyteArray array = env->NewByteArray(4096);
-			int g = 0;
-			std::string content;
-			__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "going in while");
+		while ((g = env->CallIntMethod(input, blaah, array)) != -1) {
 
-
-			while ((g = env->CallIntMethod(input, blaah, array)) != -1) {
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", " stream =  %i", g);
-
-				jbyte* content_array = env->GetByteArrayElements(array, NULL);
-				content += std::string((char*)content_array, g);
-
-				env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-
+			jbyte* content_array = env->GetByteArrayElements(array, NULL);
+			if (callback) {
+				callback->handleChunk(g, (char*) content_array);
+			} else {
+				content += std::string((char*) content_array, g);
 			}
 
-			__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %s", content.c_str());
+			env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
 
-			//env->CallVoidMethod(input, inputStreamCloseMethod);
-
-
-			return HTTPResponse(responseCode, errorMessage, "", content);
 		}
+
+		__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %Ld", content.size());
+
+		return HTTPResponse(responseCode, errorMessage, "", content);
+
   }
 
   void clearCookies() {
