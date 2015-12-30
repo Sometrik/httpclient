@@ -3,6 +3,9 @@
 
 #include "HTTPClient.h"
 
+#include <string>
+
+
 #include <jni.h>
 
 class AndroidClient : public HTTPClient {
@@ -27,10 +30,10 @@ class AndroidClient : public HTTPClient {
 
 
 
-		getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+		//getInputStreamMethod = env->GetMethodID(env->FindClass("java/net/URLConnection"), "getInputStream", "()Ljava/io/InputStream;");
 	 	readerCloseMethod = env->GetMethodID(bufferedReaderClass, "close", "()V");
 	 	readLineMethod = env->GetMethodID(bufferedReaderClass, "readLine", "()Ljava/lang/String;");
-	 	readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
+	 	readMethod = env->GetMethodID(inputStreamClass, "read", "()I");
 	 	inputStreamReaderConstructor = env->GetMethodID(inputStreamReaderClass, "<init>", "(Ljava/io/InputStream;)V");
 	 	bufferedReaderConstructor = env->GetMethodID(bufferedReaderClass, "<init>", "(Ljava/io/Reader;)V");
 		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
@@ -44,6 +47,7 @@ class AndroidClient : public HTTPClient {
 		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 		getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+		inputStreamCloseMethod = env->GetMethodID(inputStreamClass, "close", "()V");
 
 		initDone = true;
 
@@ -61,8 +65,8 @@ class AndroidClient : public HTTPClient {
 
   	jobject url = env->NewObject(urlClass, urlConstructor, env->NewStringUTF(req.getURI().c_str()));
   	//jobject url = env->NewObject(urlClass, urlConstructor, "sometrik.com");
-
   	jobject connection = env->CallObjectMethod(url, openConnectionMethod);
+
 
   	//Authorization example
 		//env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
@@ -74,6 +78,7 @@ class AndroidClient : public HTTPClient {
 		//}
 
 
+#if 0
 		//Set Follow enabled
 		switch (req.getType()) {
 		case HTTPRequest::POST:
@@ -83,13 +88,15 @@ class AndroidClient : public HTTPClient {
 				 env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("GET"));;
 			break;
 		}
+#endif
+
 
 		//Brings out exception, if URL is bad --- needs exception (IOExcpetion) handling or something
 			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
 			if (env->ExceptionCheck()) {
 			   env->ExceptionClear();
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCPETION http request responsecode = %i", responseCode);
 			  return HTTPResponse(0, "exception");
 			}
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
@@ -103,6 +110,7 @@ class AndroidClient : public HTTPClient {
 
 		}
 
+		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "going to else");
 		// stream
 		if (callback) {
 			while ( 1 ) {
@@ -112,24 +120,24 @@ class AndroidClient : public HTTPClient {
   		return HTTPResponse(responseCode, errorMessage);
 		} else {
 			// lue koko stream
-			jobject input = env->NewObject(inputStreamReaderClass, inputStreamReaderConstructor, env->CallObjectMethod(connection, getInputStreamMethod));
-		//jobject reader = env->NewObject(bufferedReaderClass, bufferedReaderConstructor, input);
 
+			jobject input = env->CallObjectMethod(connection, getInputStreamMethod);
+			env->ExceptionClear();
 
-		jbyteArray array = env->NewByteArray(4096);
-		int n = -1;
-	//	env->SetByteArrayRegion(array, 0, 4096, data)
-		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "this ain't...");
+			jmethodID blaah = env->GetMethodID(inputStreamClass, "read", "([B)I");
+			jbyteArray array = env->NewByteArray(4096);
+			int g = 0;
+			std::string content;
+			__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "going in while");
+			while ((g = env->CallIntMethod(input, blaah, array)) != -1) {
+				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", " stream =  %i", g);
+				content += g;
+			}
 
+			__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %s", content.c_str());
 
-		std::string content;
+			//env->CallVoidMethod(input, inputStreamCloseMethod);
 
-
-		while ((n = env->CallIntMethod(input, readMethod, array)) != -1){
-
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", " stream =  %i", n);
-			//		content += env->GetStringUTFChars((jstring)inputLine, 0);
-		}
 
 			return HTTPResponse(responseCode, errorMessage, "", content);
 		}
@@ -176,6 +184,7 @@ class AndroidClient : public HTTPClient {
   jmethodID readLineMethod;
   jmethodID readerCloseMethod;
   jmethodID readMethod;
+  jmethodID inputStreamCloseMethod;
 
 };
 
