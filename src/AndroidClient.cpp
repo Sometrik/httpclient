@@ -26,6 +26,7 @@ class AndroidClient : public HTTPClient {
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
 		setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
+		setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
 		setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
 		connectMethod = env->GetMethodID(httpClass, "connect", "()V");
 		getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
@@ -49,7 +50,6 @@ class AndroidClient : public HTTPClient {
 
 
   	jobject url = env->NewObject(urlClass, urlConstructor, env->NewStringUTF(req.getURI().c_str()));
-  	//jobject url = env->NewObject(urlClass, urlConstructor, "sometrik.com");
   	jobject connection = env->CallObjectMethod(url, openConnectionMethod);
 
 
@@ -64,6 +64,14 @@ class AndroidClient : public HTTPClient {
 
 
 		//Set Follow enabled
+  	if (req.getFollowLocation()){
+  		env->CallVoidMethod(connection, setFollowMethod, JNI_TRUE);
+  	} else{
+  		env->CallVoidMethod(connection, setFollowMethod, JNI_FALSE);
+  	}
+
+
+
 		switch (req.getType()) {
 		case HTTPRequest::POST:
 		  	env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
@@ -160,6 +168,7 @@ class AndroidClient : public HTTPClient {
   jmethodID readerCloseMethod;
   jmethodID readMethod;
   jmethodID inputStreamCloseMethod;
+  jmethodID setFollowMethod;
 
 };
 
