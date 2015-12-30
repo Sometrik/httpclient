@@ -78,7 +78,6 @@ class AndroidClient : public HTTPClient {
 		//}
 
 
-#if 0
 		//Set Follow enabled
 		switch (req.getType()) {
 		case HTTPRequest::POST:
@@ -88,7 +87,6 @@ class AndroidClient : public HTTPClient {
 				 env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("GET"));;
 			break;
 		}
-#endif
 
 
 		//Brings out exception, if URL is bad --- needs exception (IOExcpetion) handling or something
@@ -129,9 +127,16 @@ class AndroidClient : public HTTPClient {
 			int g = 0;
 			std::string content;
 			__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "going in while");
+
+
 			while ((g = env->CallIntMethod(input, blaah, array)) != -1) {
 				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", " stream =  %i", g);
-				content += g;
+
+				jbyte* content_array = env->GetByteArrayElements(array, NULL);
+				content += std::string((char*)content_array, g);
+
+				env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
+
 			}
 
 			__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %s", content.c_str());
