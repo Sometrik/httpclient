@@ -18,17 +18,11 @@ class AndroidClient : public HTTPClient {
 		cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
 		httpClass = env->FindClass("java/net/HttpURLConnection");
 		urlClass = env->FindClass("java/net/URL");
-	 	bufferedReaderClass = env->FindClass("java/io/BufferedReader");
-	 	inputStreamReaderClass = env->FindClass("java/io/InputStreamReader");
 	 	inputStreamClass = env->FindClass("java/io/InputStream");
 
 
-	 	readerCloseMethod = env->GetMethodID(bufferedReaderClass, "close", "()V");
-	 	readLineMethod = env->GetMethodID(bufferedReaderClass, "readLine", "()Ljava/lang/String;");
 	 	readMethod = env->GetMethodID(inputStreamClass, "read", "()I");
-	 	inputStreamReaderConstructor = env->GetMethodID(inputStreamReaderClass, "<init>", "(Ljava/io/InputStream;)V");
-	 	bufferedReaderConstructor = env->GetMethodID(bufferedReaderClass, "<init>", "(Ljava/io/Reader;)V");
-		urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
+	 	urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
 		setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
@@ -39,7 +33,6 @@ class AndroidClient : public HTTPClient {
 		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 		getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
-		inputStreamCloseMethod = env->GetMethodID(inputStreamClass, "close", "()V");
 
 		initDone = true;
 
