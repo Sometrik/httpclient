@@ -21,7 +21,7 @@ class AndroidClient : public HTTPClient {
 	 	inputStreamClass = env->FindClass("java/io/InputStream");
 
 
-	 	readMethod = env->GetMethodID(inputStreamClass, "read", "()I");
+	 	readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
 	 	urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
 		setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
@@ -62,36 +62,32 @@ class AndroidClient : public HTTPClient {
 		//		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
 		//}
 
-
-		//Set Follow enabled
-  	if (req.getFollowLocation()){
-  		env->CallVoidMethod(connection, setFollowMethod, JNI_TRUE);
-  	} else{
-  		env->CallVoidMethod(connection, setFollowMethod, JNI_FALSE);
-  	}
-
-
+		if (req.getFollowLocation()) {
+			env->CallVoidMethod(connection, setFollowMethod, JNI_TRUE);
+		} else {
+			env->CallVoidMethod(connection, setFollowMethod, JNI_FALSE);
+		}
 
 		switch (req.getType()) {
 		case HTTPRequest::POST:
-		  	env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
+			env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
 			break;
 		case HTTPRequest::GET:
-				 env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("GET"));;
+			env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("GET"));
+			;
 			break;
 		}
 
-			int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
+		int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
-			if (env->ExceptionCheck()) {
-			   env->ExceptionClear();
-				__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCPETION http request responsecode = %i", responseCode);
-			  return HTTPResponse(0, "exception");
-			}
-			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+		if (env->ExceptionCheck()) {
+			env->ExceptionClear();
+			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCPETION http request responsecode = %i", responseCode);
+			return HTTPResponse(0, "exception");
+		}
+		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
-
-			const char *errorMessage = "";
+		const char *errorMessage = "";
 
 		if (responseCode >= 400 && responseCode <= 599){
 			jstring javaMessage = (jstring)env->CallObjectMethod(connection, getResponseMessageMethod);
@@ -102,12 +98,11 @@ class AndroidClient : public HTTPClient {
 		jobject input = env->CallObjectMethod(connection, getInputStreamMethod);
 		env->ExceptionClear();
 
-		jmethodID blaah = env->GetMethodID(inputStreamClass, "read", "([B)I");
 		jbyteArray array = env->NewByteArray(4096);
 		int g = 0;
 		std::string content;
 
-		while ((g = env->CallIntMethod(input, blaah, array)) != -1) {
+		while ((g = env->CallIntMethod(input, readMethod, array)) != -1) {
 
 			jbyte* content_array = env->GetByteArrayElements(array, NULL);
 			if (callback) {
