@@ -111,6 +111,10 @@ class AndroidClient : public HTTPClient {
 
 		}
 
+		if (responseCode >= 300 && responseCode <= 399) {
+		  // TODO: connection.getURL()
+		}
+
 		__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %Ld", content.size());
 
 		return HTTPResponse(responseCode, errorMessage, "", content);
