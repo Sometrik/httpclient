@@ -62,11 +62,7 @@ class AndroidClient : public HTTPClient {
 		//		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
 		//}
 
-		if (req.getFollowLocation()) {
-			env->CallVoidMethod(connection, setFollowMethod, JNI_TRUE);
-		} else {
-			env->CallVoidMethod(connection, setFollowMethod, JNI_FALSE);
-		}
+		env->CallVoidMethod(connection, setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
 		switch (req.getType()) {
 		case HTTPRequest::POST:
