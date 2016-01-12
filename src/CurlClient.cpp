@@ -59,8 +59,6 @@ bool
 CurlClient::initialize() {
   if (curl) {
     curl_easy_reset(curl);
-    data_in.clear();
-    data_in.shrink_to_fit();
     data_out.clear();
     data_out.shrink_to_fit();
   } else {
@@ -213,6 +211,7 @@ CurlClient::handleProgress(double dltotal, double dlnow, double ultotal, double 
 size_t
 CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * userp) {
   size_t s = size * nmemb;
+  cerr << "received data: " << s << endl;
 #if 0
   CurlClient * client = static_cast<CurlClient *>(userp);
   assert(client);
@@ -222,16 +221,18 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
     return 0;
   }
 #else
+  // Content-Type: multipart/x-mixed-replace; boundary=myboundary
+					     
   HTTPResponse * response = static_cast<HTTPResponse *>(userp);
   assert(response);
   if (response->getCallback()) {
-    if (response->getCallback()->handleChunk(len, data)) {
+    if (response->getCallback()->handleChunk(s, (const char *)buffer)) {
       return s;
     } else {
       return 0;
     }
   } else {
-    response->appendContent(string(data, s));
+    response->appendContent(string((const char *)buffer, s));
     return s;
   }
 #endif
@@ -249,8 +250,6 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
 
 size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
-  // cerr << "got headers, b = " << buffer << ", s = " << (size * nmemb) << endl;
-  
   HTTPResponse * response = static_cast<HTTPResponse *>(userp);
  
   int result = 0;
@@ -264,8 +263,14 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
     for (; pos3 > 0 && isspace(s[pos3 - 1]); pos3--) { }
     std::string key = s.substr(0, pos1);
     std::string value = s.substr(pos2, pos3 - pos2);
-    
-    response->addHeader(key, value);
+
+    cerr << "got header: " << key << " " << value << endl;
+
+    if (response->getCallback()) {
+      response->getCallback()->handleHeader(key, value);
+    } else {
+      response->addHeader(key, value);
+    }
     result = size * nmemb;
   }
   return result;      
