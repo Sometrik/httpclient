@@ -2,6 +2,7 @@
 #define _HTTPCLIENTINTERFACE_H_
 
 #include <cstddef>
+#include <string>
 
 class HTTPClientInterface {
  public:
