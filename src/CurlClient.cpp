@@ -28,8 +28,9 @@ class CurlClient : public HTTPClient {
  private:
   bool addToData(size_t len, const char * data);
   bool handleProgress(double dltotal, double dlnow, double ultotal, double ulnow);
-
+  
   static size_t write_data_func(void * buffer, size_t size, size_t nmemb, void *userp);
+  static size_t headers_func(void * buffer, size_t size, size_t nmemb, void *userp);
   static int progress_func(void *  clientp, double dltotal, double dlnow, double ultotal, double ulnow);
 
   std::string interface_name;
@@ -79,6 +80,7 @@ CurlClient::initialize() {
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_func);
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_func);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headers_func);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, this);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
@@ -154,6 +156,8 @@ CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
     s += hd.second;
     headers = curl_slist_append(headers, s.c_str());
   }
+
+  HTTPResponse response;
   
   if (req.getType() == HTTPRequest::POST) {
     curl_easy_setopt(curl, CURLOPT_POST, 1);
@@ -166,37 +170,39 @@ CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
   curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
+  curl_easy_setopt(curl, CURLOPT_HEADERDATA, &response);
   if (!cookie_jar.empty()) {
     curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
     curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
   }
 
   CURLcode res = curl_easy_perform(curl);
-  int result_code = 0;
-  string redirect_url;
-  string error_text;
   if (res == 0) {
     unsigned long a = 0;
     if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &a) == CURLE_OK) {
-      result_code = a;
+      response.setResultCode(a);
     }
     if (!req.getFollowLocation()) {
       char * ptr = 0;
       curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &ptr);
       if (ptr) {
-	redirect_url = ptr;
+	response.setRedirectUrl(ptr);
       }
     }
   } else {
-    error_text = curl_easy_strerror(res);
+    response.setErrorText(curl_easy_strerror(res));
   }
 
   if (headers) {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);
     curl_slist_free_all(headers);
   }
+
+  for (auto & h : response.getHeaders()) {
+    cerr << "HEADER: '" << h.first << "' = '" << h.second << "'\n";
+  }
   
-  HTTPResponse response(result_code, error_text, redirect_url, data_in);
+  response.setContent(data_in);
   data_in.clear();
   return response;
 }
@@ -229,6 +235,30 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
   } else {
     return 0;
   }
+}
+
+size_t
+CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
+  cerr << "got headers, b = " << buffer << ", s = " << (size * nmemb) << endl;
+  
+  HTTPResponse * response = static_cast<HTTPResponse *>(userp);
+ 
+  int result = 0;
+  if (buffer) {
+    string s((const char*)buffer, size * nmemb);
+    cerr << "ht: " << s << endl;
+
+    int pos1 = 0;
+    for ( ; pos1 < s.size() && s[pos1] != ':'; pos1++) { }
+    int pos2 = s[pos1] == ':' ? pos1 + 1 : pos1;
+    for (; pos2 < s.size() && s[pos2] != ' '; pos2++) { }
+    std::string key = s.substr(0, pos1);
+    std::string value = s.substr(pos2);
+    
+    response->addHeader(key, value);
+    result = size * nmemb;
+  }
+  return result;      
 }
 
 int
