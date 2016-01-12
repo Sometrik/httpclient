@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 
+class HTTPClientInterface;
+
 class HTTPResponse {
  public:
  HTTPResponse() : result_code(0) { }
@@ -36,6 +38,9 @@ class HTTPResponse {
   }
 
   const std::map<std::string, std::string> & getHeaders() const { return headers; }
+
+  void setCallback(HTTPClientInterface * _callback) { callback = _callback; }
+  HTTPClientInterface * getCallback() { return callback; }
   
  private:
   int result_code;
@@ -43,6 +48,7 @@ class HTTPResponse {
   std::string redirect_url;
   std::string content;
   std::map<std::string, std::string> headers;
+  HTTPClientInterface * callback = 0;
 };
 
 #endif
