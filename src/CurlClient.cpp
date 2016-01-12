@@ -263,7 +263,7 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
     std::string key = s.substr(0, pos1);
     std::string value = s.substr(pos2, pos3 - pos2);
 
-    cerr << "got header: " << key << " " << value << endl;
+    // cerr << "got header: " << key << " " << value << endl;
 
     if (response->getCallback()) {
       response->getCallback()->handleHeader(key, value);
