@@ -74,7 +74,7 @@ class HTTPClient {
   virtual void clearCookies() = 0;
         
  protected:
-  std::string data_out, data_in;
+  std::string data_out;
   HTTPClientInterface * callback = 0;
   std::string user_agent;
   std::string cookie_jar;
