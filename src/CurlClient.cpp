@@ -27,7 +27,6 @@ class CurlClient : public HTTPClient {
   bool initialize();
 
  private:
-  bool addToData(size_t len, const char * data);
   bool handleProgress(double dltotal, double dlnow, double ultotal, double ulnow);
   
   static size_t write_data_func(void * buffer, size_t size, size_t nmemb, void *userp);
@@ -82,7 +81,6 @@ CurlClient::initialize() {
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_func);
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_func);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headers_func);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, this);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
@@ -159,6 +157,7 @@ CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
   }
 
   HTTPResponse response;
+  response.setCallback(callback);
   
   if (req.getType() == HTTPRequest::POST) {
     curl_easy_setopt(curl, CURLOPT_POST, 1);
@@ -172,6 +171,7 @@ CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, &response);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
   if (!cookie_jar.empty()) {
     curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
     curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
@@ -198,24 +198,8 @@ CurlClient::request(const HTTPRequest & req, const Authorization & auth) {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);
     curl_slist_free_all(headers);
   }
-
-  for (auto & h : response.getHeaders()) {
-    cerr << "HEADER: '" << h.first << "' = '" << h.second << "'\n";
-  }
   
-  response.setContent(data_in);
-  data_in.clear();
   return response;
-}
-
-bool
-CurlClient::addToData(size_t len, const char * data) {
-  if (callback) {
-    return callback->handleChunk(len, data);
-  } else {
-    data_in += string(data, len);
-    return true;
-  }  
 }
 
 bool
@@ -228,33 +212,58 @@ CurlClient::handleProgress(double dltotal, double dlnow, double ultotal, double 
 
 size_t
 CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * userp) {
+  size_t s = size * nmemb;
+#if 0
   CurlClient * client = static_cast<CurlClient *>(userp);
   assert(client);
-  size_t s = size * nmemb;
   if (client->addToData((int)s, (char *)buffer)) {
     return s;
   } else {
     return 0;
   }
+#else
+  HTTPResponse * response = static_cast<HTTPResponse *>(userp);
+  assert(response);
+  if (response->getCallback()) {
+    if (response->getCallback()->handleChunk(len, data)) {
+      return s;
+    } else {
+      return 0;
+    }
+  } else {
+    response->appendContent(string(data, s));
+    return s;
+  }
+#endif
 }
+
+// bool
+// CurlClient::addToData(size_t len, const char * data) {
+//   if (callback) {
+//     return callback->handleChunk(len, data);
+//   } else {
+//     data_in += string(data, len);
+//     return true;
+//   }  
+// }
 
 size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
-  cerr << "got headers, b = " << buffer << ", s = " << (size * nmemb) << endl;
+  // cerr << "got headers, b = " << buffer << ", s = " << (size * nmemb) << endl;
   
   HTTPResponse * response = static_cast<HTTPResponse *>(userp);
  
   int result = 0;
   if (buffer) {
     string s((const char*)buffer, size * nmemb);
-    cerr << "ht: " << s << endl;
-
     int pos1 = 0;
     for ( ; pos1 < s.size() && s[pos1] != ':'; pos1++) { }
     int pos2 = s[pos1] == ':' ? pos1 + 1 : pos1;
     for (; pos2 < s.size() && isspace(s[pos2]); pos2++) { }
+    int pos3 = s.size();
+    for (; pos3 > 0 && isspace(s[pos3 - 1]); pos3--) { }
     std::string key = s.substr(0, pos1);
-    std::string value = s.substr(pos2);
+    std::string value = s.substr(pos2, pos3 - pos2);
     
     response->addHeader(key, value);
     result = size * nmemb;
