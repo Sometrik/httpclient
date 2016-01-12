@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+#include <cctype>
 #include <iostream>
 #include <pthread.h>
 
@@ -251,7 +252,7 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
     int pos1 = 0;
     for ( ; pos1 < s.size() && s[pos1] != ':'; pos1++) { }
     int pos2 = s[pos1] == ':' ? pos1 + 1 : pos1;
-    for (; pos2 < s.size() && s[pos2] != ' '; pos2++) { }
+    for (; pos2 < s.size() && isspace(s[pos2]); pos2++) { }
     std::string key = s.substr(0, pos1);
     std::string value = s.substr(pos2);
     
