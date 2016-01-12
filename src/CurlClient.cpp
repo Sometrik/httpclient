@@ -211,7 +211,6 @@ CurlClient::handleProgress(double dltotal, double dlnow, double ultotal, double 
 size_t
 CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * userp) {
   size_t s = size * nmemb;
-  cerr << "received data: " << s << endl;
 #if 0
   CurlClient * client = static_cast<CurlClient *>(userp);
   assert(client);
