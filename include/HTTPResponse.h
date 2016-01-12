@@ -3,7 +3,6 @@
 
 #include <string>
 #include <map>
-#include <iostream>
 
 class HTTPResponse {
  public:
@@ -28,14 +27,7 @@ class HTTPResponse {
   void setRedirectUrl(const std::string & url) { redirect_url = url; }
   void setContent(const std::string & _content) { content = _content; }
 
-  void addHeader(const std::string & s) {
-    std::cerr << "adding header: " << s << std::endl;
-    int pos1 = 0;
-    for ( ; pos1 < s.size() && s[pos1] != ':'; pos1++) { }
-    int pos2 = s[pos1] == ':' ? pos1 + 1 : pos1;
-    for (; pos2 < s.size() && s[pos2] != ' '; pos2++) { }
-    std::string key = s.substr(0, pos1);
-    std::string value = s.substr(pos2);
+  void addHeader(const std::string & key, const std::string & value) {
     headers[key] = value;
   }
 
