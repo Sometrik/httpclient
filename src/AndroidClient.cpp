@@ -80,7 +80,7 @@ class AndroidClient : public HTTPClient {
 		if (env->ExceptionCheck()) {
 			env->ExceptionClear();
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
-			return HTTPResponse(0, "exception");
+			return HTTPResponse(0, "Server not found");
 		}
 		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
