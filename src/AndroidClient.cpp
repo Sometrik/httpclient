@@ -120,10 +120,14 @@ class AndroidClient : public HTTPClient {
 
 		const char *followString = "";
 
+		HTTPResponse response;
+		response.setResultCode(responseCode);
+
 		if (responseCode >= 300 && responseCode <= 399) {
 
 			jstring followURL = (jstring)env->CallObjectMethod(connection, getHeaderMethod, env->NewStringUTF("location"));
 			followString = env->GetStringUTFChars(followURL, 0);
+			response.setRedirectUrl(followString);
 
 			__android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
 
@@ -131,7 +135,8 @@ class AndroidClient : public HTTPClient {
 
 		__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %Ld", content.size());
 
-		return HTTPResponse(responseCode, errorMessage, followString, content);
+//		response.addHeader("", "");
+		return response; // HTTPResponse(responseCode, errorMessage, followString, content);
 
   }
 
