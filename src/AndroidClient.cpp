@@ -21,6 +21,7 @@ class AndroidClient : public HTTPClient {
 	 	inputStreamClass = env->FindClass("java/io/InputStream");
 
 
+		getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
 	 	readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
 	 	urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
@@ -112,7 +113,12 @@ class AndroidClient : public HTTPClient {
 		}
 
 		if (responseCode >= 300 && responseCode <= 399) {
-		  // TODO: connection.getURL()
+
+			jstring followURL = (jstring)env->CallObjectMethod(connection, getHeaderMethod, env->NewStringUTF("location"));
+			const char *followString = env->GetStringUTFChars(followURL, 0);
+
+			__android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
+
 		}
 
 		__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %Ld", content.size());
@@ -164,6 +170,7 @@ class AndroidClient : public HTTPClient {
   jmethodID readMethod;
   jmethodID inputStreamCloseMethod;
   jmethodID setFollowMethod;
+  jmethodID getHeaderMethod;
 
 };
 
