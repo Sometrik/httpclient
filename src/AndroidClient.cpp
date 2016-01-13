@@ -82,15 +82,21 @@ class AndroidClient : public HTTPClient {
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
 			return HTTPResponse(0, "Server not found");
 		}
-		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
 		const char *errorMessage = "";
 
 		if (responseCode >= 400 && responseCode <= 599){
+			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
+
 			jstring javaMessage = (jstring)env->CallObjectMethod(connection, getResponseMessageMethod);
 			errorMessage = env->GetStringUTFChars(javaMessage, 0);
 
+			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
+
+			return HTTPResponse(0, errorMessage);
 		}
+
+		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
 		jobject input = env->CallObjectMethod(connection, getInputStreamMethod);
 		env->ExceptionClear();
