@@ -79,7 +79,7 @@ class AndroidClient : public HTTPClient {
 
 		if (env->ExceptionCheck()) {
 			env->ExceptionClear();
-			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCPETION http request responsecode = %i", responseCode);
+			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
 			return HTTPResponse(0, "exception");
 		}
 		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
@@ -112,10 +112,12 @@ class AndroidClient : public HTTPClient {
 
 		}
 
+		const char *followString = "";
+
 		if (responseCode >= 300 && responseCode <= 399) {
 
 			jstring followURL = (jstring)env->CallObjectMethod(connection, getHeaderMethod, env->NewStringUTF("location"));
-			const char *followString = env->GetStringUTFChars(followURL, 0);
+			followString = env->GetStringUTFChars(followURL, 0);
 
 			__android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
 
@@ -123,7 +125,7 @@ class AndroidClient : public HTTPClient {
 
 		__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %Ld", content.size());
 
-		return HTTPResponse(responseCode, errorMessage, "", content);
+		return HTTPResponse(responseCode, errorMessage, followString, content);
 
   }
 
