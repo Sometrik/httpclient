@@ -35,6 +35,7 @@ class AndroidClient : public HTTPClient {
 		setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
 		clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
 		getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+		getErrorStreamMethod =  env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
 
 		initDone = true;
 
@@ -77,6 +78,7 @@ class AndroidClient : public HTTPClient {
 
 		int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
+		//Server not found error
 		if (env->ExceptionCheck()) {
 			env->ExceptionClear();
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
@@ -84,6 +86,7 @@ class AndroidClient : public HTTPClient {
 		}
 
 		const char *errorMessage = "";
+		jobject input;
 
 		if (responseCode >= 400 && responseCode <= 599){
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
@@ -92,35 +95,36 @@ class AndroidClient : public HTTPClient {
 			errorMessage = env->GetStringUTFChars(javaMessage, 0);
 
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
+			input = env->CallObjectMethod(connection, getErrorStreamMethod);
 
-			return HTTPResponse(0, errorMessage);
+		} else {
+
+			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+
+			input = env->CallObjectMethod(connection, getInputStreamMethod);
+			env->ExceptionClear();
 		}
-
-		__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
-
-		jobject input = env->CallObjectMethod(connection, getInputStreamMethod);
-		env->ExceptionClear();
 
 		jbyteArray array = env->NewByteArray(4096);
 		int g = 0;
-		std::string content;
 
+		HTTPResponse response;
+		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
+
+		//Gather content
 		while ((g = env->CallIntMethod(input, readMethod, array)) != -1) {
 
 			jbyte* content_array = env->GetByteArrayElements(array, NULL);
 			if (callback) {
 				callback->handleChunk(g, (char*) content_array);
 			} else {
-				content += std::string((char*) content_array, g);
+				response.appendContent(std::string((char*) content_array, g));
 			}
-
 			env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-
 		}
 
 		const char *followString = "";
 
-		HTTPResponse response;
 		response.setResultCode(responseCode);
 
 		if (responseCode >= 300 && responseCode <= 399) {
@@ -132,8 +136,6 @@ class AndroidClient : public HTTPClient {
 			__android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
 
 		}
-
-		__android_log_print(ANDROID_LOG_INFO, "content", "contentti = %Ld", content.size());
 
 //		response.addHeader("", "");
 		return response; // HTTPResponse(responseCode, errorMessage, followString, content);
@@ -176,6 +178,7 @@ class AndroidClient : public HTTPClient {
   jmethodID outputStreamConstructor;
   jmethodID factoryDecodeMethod;
   jmethodID getInputStreamMethod;
+  jmethodID getErrorStreamMethod;
   jmethodID bufferedReaderConstructor;
   jmethodID inputStreamReaderConstructor;
   jmethodID readLineMethod;
@@ -191,4 +194,3 @@ std::shared_ptr<HTTPClient>
 AndroidClientFactory::createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
   return std::make_shared<AndroidClient>(env, _user_agent, _enable_cookies, _enable_keepalive);
 }
-
