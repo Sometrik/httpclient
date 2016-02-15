@@ -22,6 +22,8 @@ class AndroidClient : public HTTPClient {
 
 
 		getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
+		getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
+		getHeaderKeyMethod = env->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
 	 	readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
 	 	urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
 		openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
@@ -185,6 +187,8 @@ class AndroidClient : public HTTPClient {
   jmethodID inputStreamCloseMethod;
   jmethodID setFollowMethod;
   jmethodID getHeaderMethod;
+  jmethodID getHeaderMethodInt;
+  jmethodID getHeaderKeyMethod;
 
 };
 
