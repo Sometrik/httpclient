@@ -88,7 +88,7 @@ class AndroidClient : public HTTPClient {
 		const char *errorMessage = "";
 		jobject input;
 
-		if (responseCode >= 400 && responseCode <= 599){
+		if (responseCode >= 400 && responseCode <= 599 ){
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
 
 			jstring javaMessage = (jstring)env->CallObjectMethod(connection, getResponseMessageMethod);
@@ -123,16 +123,14 @@ class AndroidClient : public HTTPClient {
 			env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
 		}
 
-		const char *followString = "";
-
 		response.setResultCode(responseCode);
 
 		if (responseCode >= 300 && responseCode <= 399) {
 
 			jstring followURL = (jstring)env->CallObjectMethod(connection, getHeaderMethod, env->NewStringUTF("location"));
-			followString = env->GetStringUTFChars(followURL, 0);
+			const char *followString = env->GetStringUTFChars(followURL, 0);
 			response.setRedirectUrl(followString);
-
+			env->ReleaseStringUTFChars(followURL, followString);
 			__android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
 
 		}
