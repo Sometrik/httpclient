@@ -71,21 +71,15 @@ class AndroidClient : public HTTPClient {
 
 
 		//Setting headers for request
-		auto headerMap = req.getHeaders();
-		std::vector<std::string> headerNames;
-		std::vector<std::string> headerValues;
+		auto & headerMap = req.getHeaders();
 
-		for (std::map<std::string, std::string>::iterator i = headerMap.begin(); i != headerMap.end(); ++i)
+		for (auto it = headerMap.begin(); it != headerMap.end(); ++it)
 		{
-			headerNames.insert(headerNames.end(), i->first.c_str());
-			headerValues.insert(headerValues.end(), i->second.c_str());
+						__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property name = %s", it->first.c_str());
+						__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property value = %s", it->second.c_str());
+			env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(it->first.c_str()), env->NewStringUTF(it->second.c_str()));
 		}
 
-		for (int i = 0; i<headerNames.size(); i++){
-			__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property name = %s", headerNames[i].c_str());
-			__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property value = %s", headerValues[i].c_str());
-		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(headerNames[i].c_str()), env->NewStringUTF(headerValues[i].c_str()));
-		}
 
 		switch (req.getType()) {
 		case HTTPRequest::POST:
