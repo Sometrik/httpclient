@@ -1,6 +1,7 @@
 #include <AndroidClient.h>
 #include <jni.h>
 #include <android/log.h>
+#include <vector>
 
 class AndroidClient : public HTTPClient {
  public:
@@ -67,6 +68,24 @@ class AndroidClient : public HTTPClient {
 		//}
 
 		env->CallVoidMethod(connection, setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
+
+
+		//Setting headers for request
+		auto headerMap = req.getHeaders();
+		std::vector<std::string> headerNames;
+		std::vector<std::string> headerValues;
+
+		for (std::map<std::string, std::string>::iterator i = headerMap.begin(); i != headerMap.end(); ++i)
+		{
+			headerNames.insert(headerNames.end(), i->first.c_str());
+			headerValues.insert(headerValues.end(), i->second.c_str());
+		}
+
+		for (int i = 0; i<headerNames.size(); i++){
+			__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property name = %s", headerNames[i].c_str());
+			__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property value = %s", headerValues[i].c_str());
+		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(headerNames[i].c_str()), env->NewStringUTF(headerValues[i].c_str()));
+		}
 
 		switch (req.getType()) {
 		case HTTPRequest::POST:
