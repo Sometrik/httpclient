@@ -140,9 +140,9 @@ class AndroidClient : public HTTPClient {
 
 		//Gather headers and values
 		for (int i = 0; i < 1000; i++) {
-			auto headerKey = env->GetStringUTFChars((jstring) env->CallObjectMethod(connection, getHeaderKeyMethod, i), 0);
+			const char * headerKey = env->GetStringUTFChars((jstring) env->CallObjectMethod(connection, getHeaderKeyMethod, i), 0);
 			__android_log_print(ANDROID_LOG_INFO, "content", "header key = %s", headerKey);
-			auto header = env->GetStringUTFChars((jstring) env->CallObjectMethod(connection, getHeaderMethodInt, i), 0);
+			const char * header = env->GetStringUTFChars((jstring) env->CallObjectMethod(connection, getHeaderMethodInt, i), 0);
 			__android_log_print(ANDROID_LOG_INFO, "content", "header value = %s", header);
 			if (headerKey == NULL) {
 				break;
