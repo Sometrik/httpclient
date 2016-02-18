@@ -10,7 +10,7 @@ class HTTPRequest {
     GET = 1,
     POST,
     PUT,
-    DEL
+    DELETE
   };
 
  HTTPRequest(RequestType _type, const std::string & _uri) : type(_type), uri(_uri) { }
@@ -20,7 +20,7 @@ class HTTPRequest {
     case GET: return "GET";
     case POST: return "POST";
     case PUT: return "PUT";
-    case DEL: return "DEL";
+    case DELETE: return "DELETE";
     }
     return "";
   }
