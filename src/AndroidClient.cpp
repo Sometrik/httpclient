@@ -77,16 +77,7 @@ class AndroidClient : public HTTPClient {
 			env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(hd.first.c_str()), env->NewStringUTF(hd.second.c_str()));
 		}
 
-
-		switch (req.getType()) {
-		case HTTPRequest::POST:
-			env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("POST"));
-			break;
-		case HTTPRequest::GET:
-			env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF("GET"));
-			;
-			break;
-		}
+		env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF(req.getTypeString()));
 
 		int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
