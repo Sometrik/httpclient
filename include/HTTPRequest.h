@@ -15,6 +15,16 @@ class HTTPRequest {
 
  HTTPRequest(RequestType _type, const std::string & _uri) : type(_type), uri(_uri) { }
 
+  const char * getTypeString() const {
+    switch (type) {
+    case GET: return "GET";
+    case POST: return "POST";
+    case PUT: return "PUT";
+    case DEL: return "DEL";
+    }
+    return "";
+  }
+  
   const RequestType getType() const { return type; }
   const std::string & getURI() const { return uri; }
   const std::string & getContent() const { return content; }
