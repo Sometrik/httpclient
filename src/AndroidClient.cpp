@@ -44,7 +44,7 @@ class AndroidClient : public HTTPClient {
 
 	}
 
-  HTTPResponse request(const HTTPRequest & req, const Authorization & auth){
+  HTTPResponse request(const HTTPRequest & req, const Authorization & auth) {
 
 
 		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "AndroidClient request called");
@@ -70,14 +70,11 @@ class AndroidClient : public HTTPClient {
 		env->CallVoidMethod(connection, setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
 
-		//Setting headers for request
-		auto & headerMap = req.getHeaders();
-
-		for (auto it = headerMap.begin(); it != headerMap.end(); ++it)
-		{
-						__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property name = %s", it->first.c_str());
-						__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property value = %s", it->second.c_str());
-			env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(it->first.c_str()), env->NewStringUTF(it->second.c_str()));
+		// Setting headers for request
+		for (auto & hd : req.getHeaders()) {
+						__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property name = %s", hd.first.c_str());
+						__android_log_print(ANDROID_LOG_INFO, "httpRequest", "Setting header property value = %s", hd.second.c_str());
+			env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(hd.first.c_str()), env->NewStringUTF(hd.second.c_str()));
 		}
 
 
@@ -93,7 +90,7 @@ class AndroidClient : public HTTPClient {
 
 		int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
 
-		//Server not found error
+		// Server not found error
 		if (env->ExceptionCheck()) {
 			env->ExceptionClear();
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
@@ -103,7 +100,7 @@ class AndroidClient : public HTTPClient {
 		const char *errorMessage = "";
 		jobject input;
 
-		if (responseCode >= 400 && responseCode <= 599 ){
+		if (responseCode >= 400 && responseCode <= 599) {
 			__android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
 
 			jstring javaMessage = (jstring)env->CallObjectMethod(connection, getResponseMessageMethod);
@@ -126,7 +123,7 @@ class AndroidClient : public HTTPClient {
 		HTTPResponse response;
 		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
 
-		//Gather content
+		// Gather content
 		while ((g = env->CallIntMethod(input, readMethod, array)) != -1) {
 
 			jbyte* content_array = env->GetByteArrayElements(array, NULL);
@@ -139,12 +136,12 @@ class AndroidClient : public HTTPClient {
 		}
 
 		//Gather headers and values
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; ; i++) {
 			jstring jheaderKey = (jstring)env->CallObjectMethod(connection, getHeaderKeyMethod, i);
 			const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
 			__android_log_print(ANDROID_LOG_INFO, "content", "header key = %s", headerKey);
 
-			jstring jheader = (jstring) env->CallObjectMethod(connection, getHeaderMethodInt, i);
+			jstring jheader = (jstring)env->CallObjectMethod(connection, getHeaderMethodInt, i);
 			const char * header = env->GetStringUTFChars(jheader, 0);
 			__android_log_print(ANDROID_LOG_INFO, "content", "header value = %s", header);
 			if (headerKey == NULL) {
@@ -167,8 +164,7 @@ class AndroidClient : public HTTPClient {
 
 		}
 
-//		response.addHeader("", "");
-		return response; // HTTPResponse(responseCode, errorMessage, followString, content);
+		return response;
 
   }
 
