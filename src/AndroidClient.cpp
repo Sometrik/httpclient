@@ -114,18 +114,6 @@ class AndroidClient : public HTTPClient {
 		HTTPResponse response;
 		__android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
 
-		// Gather content
-		while ((g = env->CallIntMethod(input, readMethod, array)) != -1) {
-
-			jbyte* content_array = env->GetByteArrayElements(array, NULL);
-			if (callback) {
-				callback->handleChunk(g, (char*) content_array);
-			} else {
-				response.appendContent(std::string((char*) content_array, g));
-			}
-			env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-		}
-
 		//Gather headers and values
 		for (int i = 0; ; i++) {
 			jstring jheaderKey = (jstring)env->CallObjectMethod(connection, getHeaderKeyMethod, i);
@@ -142,6 +130,19 @@ class AndroidClient : public HTTPClient {
 			env->ReleaseStringUTFChars(jheaderKey, headerKey);
 			env->ReleaseStringUTFChars(jheader, header);
 		}
+
+		// Gather content
+		while ((g = env->CallIntMethod(input, readMethod, array)) != -1) {
+
+			jbyte* content_array = env->GetByteArrayElements(array, NULL);
+			if (callback) {
+				callback->handleChunk(g, (char*) content_array);
+			} else {
+				response.appendContent(std::string((char*) content_array, g));
+			}
+			env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
+		}
+
 
 		response.setResultCode(responseCode);
 
