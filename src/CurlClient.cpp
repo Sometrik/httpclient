@@ -15,7 +15,7 @@ using namespace std;
 
 class CurlClient : public HTTPClient {
  public:
-  CurlClient(const std::string & _interface, const std::string & _user_agent, bool enable_cookies = true, bool enable_keepalive = true)
+  CurlClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
       interface_name(_interface)
   {
