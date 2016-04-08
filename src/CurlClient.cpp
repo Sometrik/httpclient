@@ -15,9 +15,21 @@ using namespace std;
 
 class CurlClient : public HTTPClient {
  public:
-  CurlClient(const std::string & _interface, const std::string & _user_agent, bool enable_cookies = true, bool enable_keepalive = true);
-  CurlClient(const CurlClient & other);
-  ~CurlClient();
+  CurlClient(const std::string & _interface, const std::string & _user_agent, bool enable_cookies = true, bool enable_keepalive = true)
+    : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
+      interface_name(_interface)
+  {
+  
+  }
+  CurlClient(const CurlClient & other) : HTTPClient(other),
+					 interface_name(other.interface_name)
+  {
+  
+  }
+
+  ~CurlClient() {
+    if (curl) curl_easy_cleanup(curl);
+  }
 
   HTTPResponse request(const HTTPRequest & req, const Authorization & auth) override;
 
@@ -36,24 +48,6 @@ class CurlClient : public HTTPClient {
   std::string interface_name;
   CURL * curl = 0;
 };
-
-CurlClient::CurlClient(const string & _interface,  const string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
-  : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
-    interface_name(_interface)
-{
-  
-}
-
-CurlClient::CurlClient(const CurlClient & other)
-  : HTTPClient(other),
-    interface_name(other.interface_name)
-{
-  
-}
-
-CurlClient::~CurlClient() {
-  if (curl) curl_easy_cleanup(curl);
-}
 
 bool
 CurlClient::initialize() {
