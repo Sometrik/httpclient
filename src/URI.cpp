@@ -443,12 +443,12 @@ URI::urlencodeUtf8(const string & str) {
   string output;
   for (unsigned int i = 0; i < str.size(); i++) {
     unsigned char c = str[i]; // ?  
-    if (c >= 128) {
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~') {
+      output += (char)c;
+    } else {
       output += '%';
       output += to_hex_digit(c >> 4);
       output += to_hex_digit(c & 0x0f);
-    } else {
-      output += (char)c;
     }
   }
   return output;
