@@ -8,6 +8,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
+#include <map>
 
 using namespace std;
 
@@ -44,7 +45,7 @@ OAuth::initialize() {
   // oauth_nonce = "f29dd9e9f37db7bf2a0267a49a78235b";
   // oauth_timestamp = 1358877129;
 
-  map<string, string> data = content;
+  map<string, string> data = content; // must be ordered
   if (!oauth_callback.empty()) data["oauth_callback"] = oauth_callback;
   data["oauth_consumer_key"] = oauth_consumer_key;
   data["oauth_nonce"] = oauth_nonce;
@@ -56,7 +57,7 @@ OAuth::initialize() {
   // data should be sorted alphabetically by the encoded key
   
   string parameters;
-  for (map<string, string>::iterator it = data.begin(); it != data.end(); it++) {
+  for (auto it = data.begin(); it != data.end(); it++) {
     if (it != data.begin()) parameters += '&';
     parameters += it->first;
     parameters += '=';

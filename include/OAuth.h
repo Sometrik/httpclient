@@ -22,7 +22,7 @@ class OAuth : public Authorization {
 
  private:
   std::string http_method, base_url;
-  std::map<std::string, std::string> content;
+  std::map<std::string, std::string> content; // must be ordered
   std::string oauth_nonce;
   time_t oauth_timestamp;
   std::string oauth_signature;

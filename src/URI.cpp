@@ -383,7 +383,7 @@ URI::getHash() const {
     }
   }
   long long hash = FNV::calcFNV1a_64(s.str());
-  cerr << "create hash " << hash << " from \"" << s.str() << "\"\n";
+  // cerr << "create hash " << hash << " from \"" << s.str() << "\"\n";
   return hash;
 }
 
