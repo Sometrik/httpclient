@@ -3,46 +3,43 @@
 #include <android/log.h>
 #include <vector>
 
+AndroidClientCache::AndroidClientCache(JNIEnv * _env)
+  : env(_env) {
+  cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
+  httpClass = env->FindClass("java/net/HttpURLConnection");
+  urlClass = env->FindClass("java/net/URL");
+  inputStreamClass = env->FindClass("java/io/InputStream");
+
+  getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
+  getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
+  getHeaderKeyMethod = env->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
+  readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
+  urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
+  openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
+  setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+  setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
+  setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
+  setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
+  connectMethod = env->GetMethodID(httpClass, "connect", "()V");
+  getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
+  getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
+  setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+  clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+  getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+  getErrorStreamMethod =  env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+}
+
 class AndroidClient : public HTTPClient {
 public:
-  AndroidClient(JNIEnv * _env, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
-    : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), env(_env) {
-  }
-
-  void androidInit() {
-    cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
-    httpClass = env->FindClass("java/net/HttpURLConnection");
-    urlClass = env->FindClass("java/net/URL");
-    inputStreamClass = env->FindClass("java/io/InputStream");
-
-    getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
-    getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
-    getHeaderKeyMethod = env->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
-    readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
-    urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
-    openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
-    setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-    setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
-    setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
-    setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
-    connectMethod = env->GetMethodID(httpClass, "connect", "()V");
-    getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
-    getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
-    setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-    clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
-    getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
-    getErrorStreamMethod =  env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
-
-    initDone = true;
+  AndroidClient(const std::shared_ptr<AndroidClientCache> & _cache, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
+    : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
   }
 
   HTTPResponse request(const HTTPRequest & req, const Authorization & auth) {
-    if (!initDone){
-      androidInit();
-    }
-
-    jobject url = env->NewObject(urlClass, urlConstructor, env->NewStringUTF(req.getURI().c_str()));
-    jobject connection = env->CallObjectMethod(url, openConnectionMethod);
+    JNIEnv * env = cache->getJNIEnv();
+    
+    jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, env->NewStringUTF(req.getURI().c_str()));
+    jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
 
     //Authorization example
     //env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
@@ -51,16 +48,16 @@ public:
     //		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
     //}
 
-    env->CallVoidMethod(connection, setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
+    env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
     // Setting headers for request
     for (auto & hd : req.getHeaders()) {
-      env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(hd.first.c_str()), env->NewStringUTF(hd.second.c_str()));
+      env->CallVoidMethod(connection, cache->setRequestPropertyMethod, env->NewStringUTF(hd.first.c_str()), env->NewStringUTF(hd.second.c_str()));
     }
 
-    env->CallVoidMethod(connection, setRequestMethod, env->NewStringUTF(req.getTypeString()));
+    env->CallVoidMethod(connection, cache->setRequestMethod, env->NewStringUTF(req.getTypeString()));
 
-    int responseCode = env->CallIntMethod(connection, getResponseCodeMethod);
+    int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
     // Server not found error
     if (env->ExceptionCheck()) {
@@ -75,15 +72,15 @@ public:
     if (responseCode >= 400 && responseCode <= 599) {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
 
-      jstring javaMessage = (jstring)env->CallObjectMethod(connection, getResponseMessageMethod);
+      jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
       errorMessage = env->GetStringUTFChars(javaMessage, 0);
 
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
-      input = env->CallObjectMethod(connection, getErrorStreamMethod);
+      input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
     } else {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
-      input = env->CallObjectMethod(connection, getInputStreamMethod);
+      input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
       env->ExceptionClear();
     }
 
@@ -95,11 +92,11 @@ public:
 
     // Gather headers and values
     for (int i = 0; ; i++) {
-      jstring jheaderKey = (jstring)env->CallObjectMethod(connection, getHeaderKeyMethod, i);
+      jstring jheaderKey = (jstring)env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
       const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
       __android_log_print(ANDROID_LOG_INFO, "content", "header key = %s", headerKey);
 
-      jstring jheader = (jstring)env->CallObjectMethod(connection, getHeaderMethodInt, i);
+      jstring jheader = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
       const char * header = env->GetStringUTFChars(jheader, 0);
       __android_log_print(ANDROID_LOG_INFO, "content", "header value = %s", header);
       if (headerKey == NULL) {
@@ -111,7 +108,7 @@ public:
     }
 
     // Gather content
-    while ((g = env->CallIntMethod(input, readMethod, array)) != -1) {
+    while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
       jbyte* content_array = env->GetByteArrayElements(array, NULL);
       if (callback) {
 	callback->handleChunk(g, (char*) content_array);
@@ -124,7 +121,7 @@ public:
     response.setResultCode(responseCode);
 
     if (responseCode >= 300 && responseCode <= 399) {
-      jstring followURL = (jstring)env->CallObjectMethod(connection, getHeaderMethod, env->NewStringUTF("location"));
+      jstring followURL = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethod, env->NewStringUTF("location"));
       const char *followString = env->GetStringUTFChars(followURL, 0);
       response.setRedirectUrl(followString);
       env->ReleaseStringUTFChars(followURL, followString);
@@ -136,52 +133,15 @@ public:
   }
 
   void clearCookies() {
-    env->CallVoidMethod(cookieManagerClass, clearCookiesMethod);
+    JNIEnv * env = cache->getJNIEnv();
+    env->CallVoidMethod(cache->cookieManagerClass, cache->clearCookiesMethod);
   }
 
-protected:
-  bool initialize() { return true; }
-
 private:
-  bool initDone = false;
-
-  JNIEnv * env;
-  jclass cookieManagerClass;
-  jmethodID clearCookiesMethod;
-
-  jclass bitmapClass;
-  jclass factoryClass;
-  jclass httpClass;
-  jclass urlClass;
-  jclass bufferedReaderClass;
-  jclass inputStreamReaderClass;
-  jclass inputStreamClass;
-  jmethodID urlConstructor;
-  jmethodID openConnectionMethod;
-  jmethodID setRequestProperty;
-  jmethodID setRequestMethod;
-  jmethodID setDoInputMethod;
-  jmethodID connectMethod;
-  jmethodID getResponseCodeMethod;
-  jmethodID getResponseMessageMethod;
-  jmethodID setRequestPropertyMethod;
-  jmethodID outputStreamConstructor;
-  jmethodID factoryDecodeMethod;
-  jmethodID getInputStreamMethod;
-  jmethodID getErrorStreamMethod;
-  jmethodID bufferedReaderConstructor;
-  jmethodID inputStreamReaderConstructor;
-  jmethodID readLineMethod;
-  jmethodID readerCloseMethod;
-  jmethodID readMethod;
-  jmethodID inputStreamCloseMethod;
-  jmethodID setFollowMethod;
-  jmethodID getHeaderMethod;
-  jmethodID getHeaderMethodInt;
-  jmethodID getHeaderKeyMethod;
+  std::shared_ptr<AndroidClientCache> cache;
 };
 
 std::shared_ptr<HTTPClient>
 AndroidClientFactory::createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
-  return std::make_shared<AndroidClient>(env, _user_agent, _enable_cookies, _enable_keepalive);
+  return std::make_shared<AndroidClient>(cache, _user_agent, _enable_cookies, _enable_keepalive);
 }
