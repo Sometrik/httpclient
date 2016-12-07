@@ -8,11 +8,7 @@
 
 class AndroidClientCache {
  public:
-  AndroidClientCache(JNIEnv * _env){
-    _env->GetJavaVM(&javaVM);
-
-    init();
-  }
+  AndroidClientCache(JNIEnv * _env);
   ~AndroidClientCache();
 
   JNIEnv * getJNIEnv() {
@@ -54,12 +50,7 @@ class AndroidClientCache {
   jmethodID getHeaderMethodInt;
   jmethodID getHeaderKeyMethod;
 
-
  private:
-
-  void init();
-
-  bool initDone = false;
   JavaVM * javaVM;
 };
 
