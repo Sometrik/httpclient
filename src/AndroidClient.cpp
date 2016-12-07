@@ -5,10 +5,10 @@
 
 AndroidClientCache::AndroidClientCache(JNIEnv * _env)
   : env(_env) {
-  cookieManagerClass =  env->FindClass("android/webkit/CookieManager");
-  httpClass = env->FindClass("java/net/HttpURLConnection");
-  urlClass = env->FindClass("java/net/URL");
-  inputStreamClass = env->FindClass("java/io/InputStream");
+  cookieManagerClass =  (jclass)env->NewGlobalRef(env->FindClass("android/webkit/CookieManager"));
+  httpClass = (jclass)env->NewGlobalRef(env->FindClass("java/net/HttpURLConnection"));
+  urlClass = (jclass)env->NewGlobalRef(env->FindClass("java/net/URL"));
+  inputStreamClass = (jclass)env->NewGlobalRef(env->FindClass("java/io/InputStream"));
 
   getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
   getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
@@ -27,6 +27,13 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env)
   clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
   getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
   getErrorStreamMethod =  env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+}
+
+AndroidClientCache::~AndroidClientCache(){
+  env->DeleteGlobalRef(cookieManagerClass);
+  env->DeleteGlobalRef(httpClass);
+  env->DeleteGlobalRef(urlClass);
+  env->DeleteGlobalRef(inputStreamClass);
 }
 
 class AndroidClient : public HTTPClient {

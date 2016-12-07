@@ -9,9 +9,10 @@
 class AndroidClientCache {
  public:
   AndroidClientCache(JNIEnv * _env);
+  ~AndroidClientCache();
 
   JNIEnv * getJNIEnv() { return env; }
-  
+
   jclass cookieManagerClass;
   jmethodID clearCookiesMethod;
   jclass bitmapClass;
