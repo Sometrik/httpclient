@@ -8,10 +8,18 @@
 
 class AndroidClientCache {
  public:
-  AndroidClientCache(JNIEnv * _env);
+  AndroidClientCache(JNIEnv * _env){
+    _env->GetJavaVM(&javaVM);
+
+    init();
+  }
   ~AndroidClientCache();
 
-  JNIEnv * getJNIEnv() { return env; }
+  JNIEnv * getJNIEnv() {
+    JNIEnv *Myenv = NULL;
+    javaVM->GetEnv((void**)&Myenv, JNI_VERSION_1_6);
+    return Myenv;
+  }
 
   jclass cookieManagerClass;
   jmethodID clearCookiesMethod;
@@ -46,8 +54,13 @@ class AndroidClientCache {
   jmethodID getHeaderMethodInt;
   jmethodID getHeaderKeyMethod;
 
+
  private:
-  JNIEnv * env;
+
+  void init();
+
+  bool initDone = false;
+  JavaVM * javaVM;
 };
 
 class AndroidClientFactory : public HTTPClientFactory {

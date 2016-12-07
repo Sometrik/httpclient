@@ -3,37 +3,46 @@
 #include <android/log.h>
 #include <vector>
 
-AndroidClientCache::AndroidClientCache(JNIEnv * _env)
-  : env(_env) {
-  cookieManagerClass =  (jclass)env->NewGlobalRef(env->FindClass("android/webkit/CookieManager"));
-  httpClass = (jclass)env->NewGlobalRef(env->FindClass("java/net/HttpURLConnection"));
-  urlClass = (jclass)env->NewGlobalRef(env->FindClass("java/net/URL"));
-  inputStreamClass = (jclass)env->NewGlobalRef(env->FindClass("java/io/InputStream"));
+void AndroidClientCache::init() {
 
-  getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
-  getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
-  getHeaderKeyMethod = env->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
-  readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
-  urlConstructor =  env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
-  openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
-  setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-  setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
-  setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
-  setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
-  connectMethod = env->GetMethodID(httpClass, "connect", "()V");
-  getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
-  getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
-  setRequestPropertyMethod =  env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-  clearCookiesMethod =  env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
-  getInputStreamMethod =  env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
-  getErrorStreamMethod =  env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+  if (!initDone) {
+    auto env = getJNIEnv();
+
+    cookieManagerClass = (jclass) env->NewGlobalRef(env->FindClass("android/webkit/CookieManager"));
+    httpClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/HttpURLConnection"));
+    urlClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/URL"));
+    inputStreamClass = (jclass) env->NewGlobalRef(env->FindClass("java/io/InputStream"));
+
+    getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
+    getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
+    getHeaderKeyMethod = env->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
+    readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
+    urlConstructor = env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
+    openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
+    setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+    setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
+    setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
+    setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
+    connectMethod = env->GetMethodID(httpClass, "connect", "()V");
+    getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
+    getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
+    setRequestPropertyMethod = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+    clearCookiesMethod = env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+    getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+    getErrorStreamMethod = env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+
+    initDone = true;
+  }
 }
 
-AndroidClientCache::~AndroidClientCache(){
-  env->DeleteGlobalRef(cookieManagerClass);
-  env->DeleteGlobalRef(httpClass);
-  env->DeleteGlobalRef(urlClass);
-  env->DeleteGlobalRef(inputStreamClass);
+AndroidClientCache::~AndroidClientCache() {
+  if (initDone) {
+    auto env = getJNIEnv();
+    env->DeleteGlobalRef(cookieManagerClass);
+    env->DeleteGlobalRef(httpClass);
+    env->DeleteGlobalRef(urlClass);
+    env->DeleteGlobalRef(inputStreamClass);
+  }
 }
 
 class AndroidClient : public HTTPClient {
