@@ -3,8 +3,7 @@
 #include <android/log.h>
 #include <vector>
 
-void
-AndroidClientCache::~AndroidClientCache() {
+AndroidClientCache::AndroidClientCache(JNIEnv * _env) {
   _env->GetJavaVM(&javaVM);
   auto env = getJNIEnv();
 
