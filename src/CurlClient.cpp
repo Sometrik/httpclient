@@ -131,6 +131,10 @@ class CurlClient : public HTTPClient {
       curl_slist_free_all(headers);
     }
 
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, 0);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, 0);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, 0);
+
     return response;
   }
   
