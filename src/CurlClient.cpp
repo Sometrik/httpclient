@@ -70,8 +70,15 @@ class CurlClient : public HTTPClient {
 	headers = curl_slist_append(headers, s.c_str());
       }
     }
-    
+
+    map<string, string> combined_headers;
+    for (auto & hd : default_headers) {
+      combined_headers[hd.first] = hd.second;      
+    }
     for (auto & hd : req.getHeaders()) {
+      combined_headers[hd.first] = hd.second;
+    }
+    for (auto & hd : combined_headers) {
       string s = hd.first;
       s += ": ";
       s += hd.second;
@@ -123,7 +130,7 @@ class CurlClient : public HTTPClient {
       curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);
       curl_slist_free_all(headers);
     }
-    
+
     return response;
   }
   

@@ -78,6 +78,10 @@ class HTTPClient {
 
   void setCookieJar(const std::string & filename) { cookie_jar = filename; }
 
+  void addDefaultHeader(const std::string & name, const std::string & value) {
+    default_headers[name] = value;
+  }
+
   virtual HTTPResponse request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface * callback = 0) = 0;
   virtual void clearCookies() = 0;
 
@@ -87,6 +91,7 @@ class HTTPClient {
   std::string user_agent;
   std::string cookie_jar;
   bool enable_cookies, enable_keepalive;
+  std::map<std::string, std::string> default_headers; 
 };
 
 class HTTPClientFactory {

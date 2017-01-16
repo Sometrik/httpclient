@@ -33,8 +33,15 @@ class iOSClient : public HTTPClient {
     
     [request setHTTPShouldHandleCookies:NO];
     [request setHTTPShouldUsePipelining:NO];
-    
+
+    map<string, string> combined_headers;
+    for (auto & hd : default_headers) {
+      combined_headers[hd.first] = hd.second;      
+    }
     for (auto & hd : req.getHeaders()) {
+      combined_headers[hd.first] = hd.second;
+    }
+    for (auto & hd : combined_headers) {
         NSString *n = [NSString stringWithUTF8String:hd.first.c_str()];
         NSString *v = [NSString stringWithUTF8String:hd.second.c_str()];
         [request setValue:v forHTTPHeaderField:n];

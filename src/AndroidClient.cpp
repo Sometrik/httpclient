@@ -61,7 +61,14 @@ public:
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
     // Setting headers for request
+    map<string, string> combined_headers;
+    for (auto & hd : default_headers) {
+      combined_headers[hd.first] = hd.second;      
+    }
     for (auto & hd : req.getHeaders()) {
+      combined_headers[hd.first] = hd.second;
+    }
+    for (auto & hd : combined_headers) {
       env->CallVoidMethod(connection, cache->setRequestPropertyMethod, env->NewStringUTF(hd.first.c_str()), env->NewStringUTF(hd.second.c_str()));
     }
 
