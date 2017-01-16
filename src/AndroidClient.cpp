@@ -45,7 +45,7 @@ public:
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
   }
 
-  HTTPResponse request(const HTTPRequest & req, const Authorization & auth) {
+  HTTPResponse request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface * callback) {
     JNIEnv * env = cache->getJNIEnv();
     
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, env->NewStringUTF(req.getURI().c_str()));
