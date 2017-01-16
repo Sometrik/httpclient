@@ -9,8 +9,6 @@ class Authorization {
   virtual ~Authorization() { }
   virtual const char * getHeaderName() const { return "Authorization"; }
   virtual std::string createHeader() const { return ""; }
-
-  static Authorization noAuth;
 };
 
 #endif
