@@ -73,10 +73,10 @@ public:
     if (env->ExceptionCheck()) {
       env->ExceptionClear();
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
-      if (callback) callback->handleResponseCode(500);
+      if (callback) callback->handleResultCode(500);
       return HTTPResponse(0, "Server not found");
     } else if (callback) {
-      callback->handleResponseCode(responseCode);
+      callback->handleResultCode(responseCode);
     }
 
     const char *errorMessage = "";
@@ -116,7 +116,7 @@ public:
 	break;
       }
       response.addHeader(headerKey, header);
-      if (callback) callback->handleHeader(headerKey, value);
+      if (callback) callback->handleHeader(headerKey, header);
       env->ReleaseStringUTFChars(jheaderKey, headerKey);
       env->ReleaseStringUTFChars(jheader, header);
     }
