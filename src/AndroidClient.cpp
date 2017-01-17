@@ -80,8 +80,8 @@ public:
     if (env->ExceptionCheck()) {
       env->ExceptionClear();
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
-      callback.handleResponseCode(500);
-      // callback->handleResponseText("Server not found");
+      callback.handleResultCode(500);
+      // callback->handleResultText("Server not found");
       return;
     }
 
