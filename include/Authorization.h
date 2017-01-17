@@ -6,7 +6,7 @@
 class Authorization {
  public:
   Authorization() { }
-  virtual ~Authorization() { }
+  virtual ~Authorization() = default;
   virtual const char * getHeaderName() const { return "Authorization"; }
   virtual std::string createHeader() const { return ""; }
 };
