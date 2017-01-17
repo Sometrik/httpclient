@@ -82,9 +82,10 @@ public:
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
       callback.handleResponseCode(500);
       // callback->handleResponseText("Server not found");
-    } else {
-      callback.handleResponseCode(responseCode);
+      return;
     }
+
+    callback.handleResultCode(responseCode);
 
     const char *errorMessage = "";
     jobject input;
@@ -121,7 +122,7 @@ public:
       if (headerKey == NULL) {
 	break;
       }
-      callback.handleHeader(headerKey, value);
+      callback.handleHeader(headerKey, header);
       env->ReleaseStringUTFChars(jheaderKey, headerKey);
       env->ReleaseStringUTFChars(jheader, header);
     }
