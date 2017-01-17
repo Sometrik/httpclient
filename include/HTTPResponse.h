@@ -40,7 +40,10 @@ class HTTPResponse : public HTTPClientInterface {
 
 
   void handleResultCode(int code) override { result_code = code; }
-  void handleRedirectUrl(const std::string & url) override { redirect_url = url; }
+  bool handleRedirectUrl(const std::string & url) override {
+    redirect_url = url;
+    return true;
+  }
   void handleHeader(const std::string & key, const std::string & value) override {
     addHeader(key, value);
   }

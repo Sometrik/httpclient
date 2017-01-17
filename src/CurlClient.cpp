@@ -196,8 +196,8 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
 size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
   HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
- 
-  int result = 0;
+
+  bool keep_running = true;
   if (buffer) {
     string s((const char*)buffer, size * nmemb);
 
@@ -221,14 +221,14 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
       std::string key = s.substr(0, pos1);
       std::string value = s.substr(pos2, pos3 - pos2);
 
-      if (key == "Location") {
-	callback->handleRedirectUrl(value);
+      if (key == "Location" && !callback->handleRedirectUrl(value)) {
+	keep_running = false;
       }      
       callback->handleHeader(key, value);
     }
   }
   
-  return size * nmemb;
+  return keep_running ? size * nmemb : 0;
 }
 
 int
