@@ -27,5 +27,8 @@
 *.out
 *.app
 
+# Dependency files
+*.d
+
 # Emacs backup copies
 *~
