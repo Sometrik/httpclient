@@ -45,7 +45,7 @@ public:
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
   }
 
-  HTTPResponse request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface * callback) {
+  void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
     JNIEnv * env = cache->getJNIEnv();
     
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, env->NewStringUTF(req.getURI().c_str()));
@@ -80,10 +80,10 @@ public:
     if (env->ExceptionCheck()) {
       env->ExceptionClear();
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
-      if (callback) callback->handleResponseCode(500);
-      return HTTPResponse(0, "Server not found");
-    } else if (callback) {
-      callback->handleResponseCode(responseCode);
+      callback.handleResponseCode(500);
+      // callback->handleResponseText("Server not found");
+    } else {
+      callback.handleResponseCode(responseCode);
     }
 
     const char *errorMessage = "";
@@ -107,7 +107,6 @@ public:
     jbyteArray array = env->NewByteArray(4096);
     int g = 0;
 
-    HTTPResponse response;
     __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
 
     // Gather headers and values
@@ -122,8 +121,7 @@ public:
       if (headerKey == NULL) {
 	break;
       }
-      response.addHeader(headerKey, header);
-      if (callback) callback->handleHeader(headerKey, value);
+      callback.handleHeader(headerKey, value);
       env->ReleaseStringUTFChars(jheaderKey, headerKey);
       env->ReleaseStringUTFChars(jheader, header);
     }
@@ -131,26 +129,18 @@ public:
     // Gather content
     while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
       jbyte* content_array = env->GetByteArrayElements(array, NULL);
-      if (callback) {
-	callback->handleChunk(g, (char*) content_array);
-      } else {
-	response.appendContent(std::string((char*) content_array, g));
-      }
+      callback.handleChunk(g, (char*) content_array);
       env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
     }
-
-    response.setResultCode(responseCode);
 
     if (responseCode >= 300 && responseCode <= 399) {
       jstring followURL = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethod, env->NewStringUTF("location"));
       const char *followString = env->GetStringUTFChars(followURL, 0);
-      response.setRedirectUrl(followString);
+      callback.handleRedirectUrl(followString);
       env->ReleaseStringUTFChars(followURL, followString);
       __android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
 
     }
-
-    return response;
   }
 
   void clearCookies() {
