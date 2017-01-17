@@ -1,12 +1,11 @@
 #ifndef _HTTPRESPONSE_H_
 #define _HTTPRESPONSE_H_
 
-#include <string>
+#include <HTTPClientInterface.h>
+
 #include <map>
 
-class HTTPClientInterface;
-
-class HTTPResponse {
+class HTTPResponse : public HTTPClientInterface {
  public:
  HTTPResponse() : result_code(0) { }
  HTTPResponse(int _result_code, const std::string & _error_text)
@@ -39,8 +38,16 @@ class HTTPResponse {
 
   const std::map<std::string, std::string> & getHeaders() const { return headers; }
 
-  void setCallback(HTTPClientInterface * _callback) { callback = _callback; }
-  HTTPClientInterface * getCallback() { return callback; }
+
+  void handleResultCode(int code) override { result_code = code; }
+  void handleRedirectUrl(const std::string & url) override { redirect_url = url; }
+  void handleHeader(const std::string & key, const std::string & value) override {
+    addHeader(key, value);
+  }
+  bool handleChunk(size_t len, const char * chunk) {
+    content += std::string(chunk, len);
+    return true;
+  }
   
  private:
   int result_code;
@@ -48,7 +55,6 @@ class HTTPResponse {
   std::string redirect_url;
   std::string content;
   std::map<std::string, std::string> headers;
-  HTTPClientInterface * callback = 0;
 };
 
 #endif
