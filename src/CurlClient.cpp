@@ -297,9 +297,9 @@ static void kill_locks(void)
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
-std::shared_ptr<HTTPClient>
+std::unique_ptr<HTTPClient>
 CurlClientFactory::createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
-  return std::make_shared<CurlClient>("", _user_agent, _enable_cookies, _enable_keepalive);
+  return std::unique_ptr<CurlClient>(new CurlClient("", _user_agent, _enable_cookies, _enable_keepalive));
 }
 
 void

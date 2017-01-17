@@ -116,7 +116,7 @@ class iOSClient : public HTTPClient {
   }
 };
 
-std::shared_ptr<HTTPClient>
+std::unique_ptr<HTTPClient>
 iOSClientFactory::createClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
-  return std::make_shared<iOSClient>(_user_agent, _enable_cookies, _enable_keepalive);
+  return std::unique_ptr<iOSClient>(new iOSClient(_user_agent, _enable_cookies, _enable_keepalive));
 }

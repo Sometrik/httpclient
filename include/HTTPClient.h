@@ -130,8 +130,8 @@ class HTTPClientFactory {
   HTTPClientFactory(const char * _default_user_agent = "Sometrik/httpclient") : default_user_agent(_default_user_agent) { }
   virtual ~HTTPClientFactory() { }
 
-  virtual std::shared_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true) = 0;
-  std::shared_ptr<HTTPClient> createClient(bool _enable_cookies = true, bool _enable_keepalive = true) { return createClient(default_user_agent, _enable_cookies, _enable_keepalive); }
+  virtual std::unique_ptr<HTTPClient> createClient(const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true) = 0;
+  std::unique_ptr<HTTPClient> createClient(bool _enable_cookies = true, bool _enable_keepalive = true) { return createClient(default_user_agent, _enable_cookies, _enable_keepalive); }
 
   const std::string & getDefaultUserAgent() const { return default_user_agent; }
   
