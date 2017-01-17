@@ -13,30 +13,30 @@ using namespace std;
 
 #include <curl/curl.h>
 
+static bool is_initialized = false;
+
 class CurlClient : public HTTPClient {
  public:
   CurlClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
       interface_name(_interface)
   {
-  
-  }
-  CurlClient(const CurlClient & other) : HTTPClient(other),
-					 interface_name(other.interface_name)
-  {
-  
+    assert(is_initialized);
   }
 
   ~CurlClient() {
     if (curl) curl_easy_cleanup(curl);
   }
 
-  HTTPResponse request(const HTTPRequest & req, const Authorization & auth,   HTTPClientInterface * callback) override {
+  void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
+#if 0
     if (req.getURI().empty()) {
       return HTTPResponse(0, "empty URI");
     }
+#endif
     if (!initialize()) {
-      return HTTPResponse(0, "Unable to initialize client");
+      // return HTTPResponse(0, "Unable to initialize client");
+      return;
     }
 
     // string ascii_uri = encodeIDN(uri);
@@ -85,9 +85,6 @@ class CurlClient : public HTTPClient {
       headers = curl_slist_append(headers, s.c_str());
     }
     
-    HTTPResponse response;
-    response.setCallback(callback);
-    
     if (req.getType() == HTTPRequest::POST) {
       curl_easy_setopt(curl, CURLOPT_POST, 1);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, req.getContent().size());
@@ -99,33 +96,23 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &response);
+      
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &callback);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &callback);
     if (!cookie_jar.empty()) {
       curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
       curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
     } 
-   
+
     CURLcode res = curl_easy_perform(curl);
-    if (res == 0) {
-      unsigned long a = 0;
-      if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &a) == CURLE_OK) {
-	response.setResultCode(a);
-      }
-      if (!req.getFollowLocation()) {
-	char * ptr = 0;
-	curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &ptr);
-	if (ptr) {
-	  if (callback) callback->handleRedirectUrl(ptr);
-	  response.setRedirectUrl(ptr);
-	}
-      }
-    } else {
-      response.setResultCode(500);
-      response.setErrorText(curl_easy_strerror(res));
-    }
-    
+    // if (res != 0) {
+    //   response.setResultCode(500);
+    //   response.setErrorText(curl_easy_strerror(res));
+    // }
+
+    callback.handleDisconnect();
+
     if (headers) {
       curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);
       curl_slist_free_all(headers);
@@ -135,7 +122,7 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, 0);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, 0);
 
-    return response;
+    // return response;
   }
   
   void clearCookies() override {
@@ -170,7 +157,7 @@ class CurlClient : public HTTPClient {
       curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
       curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
       curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 600);
-      // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+      curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
       if (!enable_keepalive) {
 	curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
 	curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
@@ -201,23 +188,14 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
   size_t s = size * nmemb;
   // Content-Type: multipart/x-mixed-replace; boundary=myboundary
 					     
-  HTTPResponse * response = static_cast<HTTPResponse *>(userp);
-  assert(response);
-  if (response->getCallback()) {
-    if (response->getCallback()->handleChunk(s, (const char *)buffer)) {
-      return s;
-    } else {
-      return 0;
-    }
-  } else {
-    response->appendContent(string((const char *)buffer, s));
-    return s;
-  }
+  HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
+  assert(callback);
+  return callback->handleChunk(s, (const char *)buffer) ? s : 0;  
 }
 
 size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
-  HTTPResponse * response = static_cast<HTTPResponse *>(userp);
+  HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
  
   int result = 0;
   if (buffer) {
@@ -225,15 +203,12 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
 
     if (s.compare(0, 5, "HTTP/") == 0) {
       auto pos1 = s.find_first_of(' ');
-      if (pos1 != -1) {
+      if (pos1 != string::npos) {
 	auto pos2 = s.find_first_of(' ', pos1 + 1);
-	if (pos2 != -1) {
+	if (pos2 != string::npos) {
 	  auto s2 = s.substr(pos1, pos2 - pos1);
 	  int code = atoi(s2.c_str());
-	  cerr << "got result code: " << code << endl;
-	  if (response->getCallback()) {
-	    response->getCallback()->handleResultCode(code);
-	  }
+	  callback->handleResultCode(code);
 	}
       }
     } else {
@@ -246,28 +221,21 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
       std::string key = s.substr(0, pos1);
       std::string value = s.substr(pos2, pos3 - pos2);
 
-      if (response->getCallback() && key == "Location") {
-	response->getCallback()->handleRedirectUrl(value);
-      }
-      
-      if (response->getCallback()) {
-	response->getCallback()->handleHeader(key, value);
-      } else {
-	response->addHeader(key, value);
-      }
+      if (key == "Location") {
+	callback->handleRedirectUrl(value);
+      }      
+      callback->handleHeader(key, value);
     }
-    result = size * nmemb;
   }
-  return result;      
+  
+  return size * nmemb;
 }
 
 int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-  HTTPResponse * response = static_cast<HTTPResponse *>(clientp);
-  if (response->getCallback()) {
-    return response->getCallback()->onIdle(true) ? 0 : 1;
-  }
-  return 0;
+  HTTPClientInterface * callback = (HTTPClientInterface *)(clientp);
+  assert(callback);
+  return callback->onIdle(true) ? 0 : 1;
 }
 
 #ifndef __APPLE__
@@ -291,7 +259,7 @@ static unsigned long thread_id(void) {
 #ifdef WIN32
   ret = (unsigned long)(pthread_self().p);
 #else
-  ret=(unsigned long)pthread_self();
+  ret = (unsigned long)pthread_self();
 #endif
   return(ret);
 }
@@ -336,6 +304,8 @@ CurlClientFactory::createClient(const std::string & _user_agent, bool _enable_co
 
 void
 CurlClientFactory::globalInit() {
+  is_initialized = true;
+  
 #ifndef __APPLE__
 #if 0
   gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -357,6 +327,8 @@ CurlClientFactory::globalInit() {
 
 void
 CurlClientFactory::globalCleanup() {
+  is_initialized = false;
+  
   curl_global_cleanup();
 #ifndef __APPLE__
   kill_locks();
