@@ -61,7 +61,7 @@ public:
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
     // Setting headers for request
-    map<string, string> combined_headers;
+    std::map<std::string, std::string> combined_headers;
     for (auto & hd : default_headers) {
       combined_headers[hd.first] = hd.second;      
     }
