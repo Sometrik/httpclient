@@ -84,6 +84,29 @@ class CurlClient : public HTTPClient {
       s += hd.second;
       headers = curl_slist_append(headers, s.c_str());
     }
+
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent.c_str());
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_func);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_func);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headers_func);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
+    curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 600);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+    curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
+    if (!enable_keepalive) {
+      curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
+      curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
+      // curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, 10);
+    }
+    if (!cookie_jar.empty()) {
+      curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
+      curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
+    } else if (enable_cookies) {
+      curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
+    }
     
     if (req.getType() == HTTPRequest::POST) {
       curl_easy_setopt(curl, CURLOPT_POST, 1);
@@ -148,27 +171,6 @@ class CurlClient : public HTTPClient {
 	assert(r != CURLE_INTERFACE_FAILED);
       }
 #endif
-      curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent.c_str());
-      curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data_func);
-      curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_func);
-      curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headers_func);
-      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-      curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
-      curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
-      curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 600);
-      curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-      if (!enable_keepalive) {
-	curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
-	curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
-	// curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, 10);
-      }
-      if (!cookie_jar.empty()) {
-	curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookie_jar.c_str());
-	curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookie_jar.c_str());
-      } else if (enable_cookies) {
-	curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
-      }
     }
     
     return curl != 0;
