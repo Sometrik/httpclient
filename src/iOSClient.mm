@@ -15,10 +15,8 @@ class iOSClient : public HTTPClient {
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive) {
   
   }
-  iOSClient(const iOSClient & other) : HTTPClient(other) { }
-  ~iOSClient() { }
 
-  HTTPResponse request(const HTTPRequest & req, const Authorization & auth) override {
+  void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
     if (req.getURI().empty()) {
       return HTTPResponse(0, "empty URI");
     }
@@ -99,7 +97,10 @@ class iOSClient : public HTTPClient {
     } else if ([urlResponse isKindOfClass:[NSHTTPURLResponse class]]) {
       result_code = [(NSHTTPURLResponse *)urlResponse statusCode];
     }
-    string content((const char *)[responseData bytes], [responseData length]);
+    
+    callback.handleResultCode(result_code);
+    callback.handleChunk([responseData length], (const char *)[responseData bytes]);
+
     // get redirect_url
     // NSDictionary* headers = [(NSHTTPURLResponse *)response allHeaderFields];
     
@@ -107,8 +108,6 @@ class iOSClient : public HTTPClient {
     // [responseData release];
     // [requestError release];
     // [urlResponse release];
-
-    return HTTPResponse(result_code, "", "", content);
   }
 
   void clearCookies() override {
