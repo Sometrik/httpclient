@@ -7,12 +7,6 @@
 
 class HTTPResponse : public HTTPClientInterface {
  public:
- HTTPResponse() : result_code(0) { }
- HTTPResponse(int _result_code, const std::string & _error_text)
-   : result_code(_result_code), error_text(_error_text) { }
- HTTPResponse(int _result_code, const std::string & _error_text, const std::string & _redirect_url, const std::string & _content)
-   : result_code(_result_code), error_text(_error_text), redirect_url(_redirect_url), content(_content) { }
-
   bool isInfo() const { return result_code >= 100 && result_code <= 199; }
   bool isSuccess() const { return result_code >= 200 && result_code <= 299; }
   bool isError() const { return result_code == 0 || (result_code >= 400 && result_code <= 599); }
@@ -53,7 +47,7 @@ class HTTPResponse : public HTTPClientInterface {
   }
   
  private:
-  int result_code;
+  int result_code = 0;
   std::string error_text;
   std::string redirect_url;
   std::string content;
