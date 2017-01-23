@@ -32,7 +32,6 @@ class HTTPResponse : public HTTPClientInterface {
 
   const std::map<std::string, std::string> & getHeaders() const { return headers; }
 
-
   void handleResultCode(int code) override { result_code = code; }
   bool handleRedirectUrl(const std::string & url) override {
     redirect_url = url;
@@ -41,7 +40,7 @@ class HTTPResponse : public HTTPClientInterface {
   void handleHeader(const std::string & key, const std::string & value) override {
     addHeader(key, value);
   }
-  bool handleChunk(size_t len, const char * chunk) {
+  bool handleChunk(size_t len, const char * chunk) override {
     content += std::string(chunk, len);
     return true;
   }
