@@ -52,6 +52,7 @@ public:
     
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, env->NewStringUTF(req.getURI().c_str()));
     jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
+    env->DeleteLocalRef(url),
 
     //Authorization example
     //env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
@@ -71,7 +72,11 @@ public:
       combined_headers[hd.first] = hd.second;
     }
     for (auto & hd : combined_headers) {
-      env->CallVoidMethod(connection, cache->setRequestPropertyMethod, env->NewStringUTF(hd.first.c_str()), env->NewStringUTF(hd.second.c_str()));
+      jstring firstHeader = env->NewStringUTF(hd.first.c_str());
+      jstring secondHeader = env->NewStringUTF(hd.second.c_str());
+      env->CallVoidMethod(connection, cache->setRequestPropertyMethod, firstHeader, secondHeader);
+      env->ReleaseStringUTFChars(firstHeader, hd.first.c_str());
+      env->ReleaseStringUTFChars(secondHeader, hd.second.c_str());
     }
 
     env->CallVoidMethod(connection, cache->setRequestMethod, env->NewStringUTF(req.getTypeString()));
@@ -82,7 +87,7 @@ public:
     if (env->ExceptionCheck()) {
       jthrowable error = env->ExceptionOccurred();
       env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
-
+      env->DeleteLocalRef(error);
 
       env->ExceptionClear();
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
@@ -130,6 +135,8 @@ public:
       callback.handleHeader(headerKey, header);
       env->ReleaseStringUTFChars(jheaderKey, headerKey);
       env->ReleaseStringUTFChars(jheader, header);
+      env->DeleteLocalRef(jheaderKey);
+      env->DeleteLocalRef(jheader);
     }
 
     // Gather content
@@ -137,17 +144,21 @@ public:
       jbyte* content_array = env->GetByteArrayElements(array, NULL);
       callback.handleChunk(g, (char*) content_array);
       env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
+      env->DeleteLocalRef(array);
     }
 
     if (responseCode >= 300 && responseCode <= 399) {
       jstring followURL = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethod, env->NewStringUTF("location"));
       const char *followString = env->GetStringUTFChars(followURL, 0);
       callback.handleRedirectUrl(followString);
-      env->ReleaseStringUTFChars(followURL, followString);
       __android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
-
+      env->ReleaseStringUTFChars(followURL, followString);
+      env->DeleteLocalRef(followURL);
     }
-  }
+
+    env->DeleteLocalRef(input);
+    env->DeleteLocalRef(connection);
+}
 
   void clearCookies() {
     JNIEnv * env = cache->getJNIEnv();
