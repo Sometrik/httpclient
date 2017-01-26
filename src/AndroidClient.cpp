@@ -39,6 +39,7 @@ AndroidClientCache::~AndroidClientCache() {
   env->DeleteGlobalRef(httpClass);
   env->DeleteGlobalRef(urlClass);
   env->DeleteGlobalRef(inputStreamClass);
+  env->DeleteGlobalRef(frameworkClass);
 }
 
 class AndroidClient : public HTTPClient {
