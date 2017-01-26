@@ -30,7 +30,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) {
   clearCookiesMethod = env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
   getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
   getErrorStreamMethod = env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
-  handleThrowableMethod = env->GetMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
+  handleThrowableMethod = env->GetStaticMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
 }
 
 AndroidClientCache::~AndroidClientCache() {
@@ -104,9 +104,9 @@ public:
 
     if (responseCode >= 400 && responseCode <= 599) {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
-//      jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
-//      errorMessage = env->GetStringUTFChars(javaMessage, 0);
-//      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
+      jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
+      errorMessage = env->GetStringUTFChars(javaMessage, 0);
+      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
 
       input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
     } else {
@@ -145,8 +145,8 @@ public:
       jbyte* content_array = env->GetByteArrayElements(array, NULL);
       callback.handleChunk(g, (char*) content_array);
       env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-      env->DeleteLocalRef(array);
     }
+    env->DeleteLocalRef(array);
 
     if (responseCode >= 300 && responseCode <= 399) {
       jstring followURL = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethod, env->NewStringUTF("location"));
