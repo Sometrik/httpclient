@@ -11,6 +11,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) {
   httpClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/HttpURLConnection"));
   urlClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/URL"));
   inputStreamClass = (jclass) env->NewGlobalRef(env->FindClass("java/io/InputStream"));
+  frameworkClass = (jclass) env->NewGlobalRef(env->FindClass("com/sometrik/framework/FrameWork"));
 
   getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
   getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
@@ -29,6 +30,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) {
   clearCookiesMethod = env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
   getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
   getErrorStreamMethod = env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+  handleThrowableMethod = env->GetMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
 }
 
 AndroidClientCache::~AndroidClientCache() {
@@ -63,7 +65,7 @@ public:
     // Setting headers for request
     std::map<std::string, std::string> combined_headers;
     for (auto & hd : default_headers) {
-      combined_headers[hd.first] = hd.second;      
+      combined_headers[hd.first] = hd.second;
     }
     for (auto & hd : req.getHeaders()) {
       combined_headers[hd.first] = hd.second;
@@ -78,6 +80,10 @@ public:
 
     // Server not found error
     if (env->ExceptionCheck()) {
+      jthrowable error = env->ExceptionOccurred();
+      env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
+
+
       env->ExceptionClear();
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
       callback.handleResultCode(500);
@@ -92,11 +98,10 @@ public:
 
     if (responseCode >= 400 && responseCode <= 599) {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i", responseCode);
+//      jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
+//      errorMessage = env->GetStringUTFChars(javaMessage, 0);
+//      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
 
-      jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
-      errorMessage = env->GetStringUTFChars(javaMessage, 0);
-
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
       input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
     } else {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
