@@ -26,6 +26,7 @@ class AndroidClientCache {
   jclass bufferedReaderClass;
   jclass inputStreamReaderClass;
   jclass inputStreamClass;
+  jclass frameworkClass;
   jmethodID urlConstructor;
   jmethodID openConnectionMethod;
   jmethodID setRequestProperty;
@@ -49,6 +50,7 @@ class AndroidClientCache {
   jmethodID getHeaderMethod;
   jmethodID getHeaderMethodInt;
   jmethodID getHeaderKeyMethod;
+  jmethodID handleThrowableMethod;
 
  private:
   JavaVM * javaVM;
