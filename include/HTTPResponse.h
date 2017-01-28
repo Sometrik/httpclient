@@ -22,10 +22,6 @@ class HTTPResponse : public HTTPClientInterface {
   void setRedirectUrl(const std::string & url) { redirect_url = url; }
   void setContent(const std::string & _content) { content = _content; }
 
-  void addHeader(const std::string & key, const std::string & value) {
-    headers[key] = value;
-  }
-
   void appendContent(const std::string & s) {
     content += s;
   }
@@ -38,7 +34,7 @@ class HTTPResponse : public HTTPClientInterface {
     return true;
   }
   void handleHeader(const std::string & key, const std::string & value) override {
-    addHeader(key, value);
+    headers[key] = value;
   }
   bool handleChunk(size_t len, const char * chunk) override {
     content += std::string(chunk, len);
