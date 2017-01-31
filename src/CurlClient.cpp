@@ -15,10 +15,6 @@ using namespace std;
 
 static bool is_initialized = false;
 
-static size_t write_data_func(void * buffer, size_t size, size_t nmemb, void * userp);
-static size_t headers_func(void * buffer, size_t size, size_t nmemb, void *userp);
-static int progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow);
-
 class CurlClient : public HTTPClient {
  public:
   CurlClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true)
@@ -177,27 +173,26 @@ class CurlClient : public HTTPClient {
   }
 
  private:
-#if 0
   static size_t write_data_func(void * buffer, size_t size, size_t nmemb, void *userp);
   static size_t headers_func(void * buffer, size_t size, size_t nmemb, void *userp);
   static int progress_func(void *  clientp, double dltotal, double dlnow, double ultotal, double ulnow);
-#endif
 
   std::string interface_name;
   CURL * curl = 0;
 };
   
-static size_t write_data_func(void * buffer, size_t size, size_t nmemb, void * userp) {
+size_t
+CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * userp) {
   size_t s = size * nmemb;
   // Content-Type: multipart/x-mixed-replace; boundary=myboundary
 					     
   HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
   assert(callback);
-  bool t = callback->handleChunk(s, (const char *)buffer);
-  return t ? s : 0;  
+  return callback->handleChunk(s, (const char *)buffer) ? s : 0;  
 }
 
-static size_t headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
+size_t
+CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
   HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
   
   size_t s = size * nmemb;
@@ -235,7 +230,8 @@ static size_t headers_func(void * buffer, size_t size, size_t nmemb, void *userp
   return keep_running ? s : 0;
 }
 
-static int progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+int
+CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
   HTTPClientInterface * callback = (HTTPClientInterface *)(clientp);
   assert(callback);
   return callback->onIdle(true) ? 0 : 1;
