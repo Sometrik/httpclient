@@ -64,6 +64,16 @@ public:
 
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
+    //Apply user agent
+    const char * cuser_agent = user_agent.c_str();
+    const char * cuser_agent_key = "User-Agent";
+    jstring juser_agent = env->NewStringUTF(user_agent.c_str());
+    jstring juser_agent_key = env->NewStringUTF(cuser_agent_key);
+    env->CallVoidMethod(connection, cache->setRequestProperty, juser_agent_key, juser_agent);
+    env->DeleteLocalRef(juser_agent);
+    env->DeleteLocalRef(juser_agent_key);
+
+
     // Setting headers for request
     std::map<std::string, std::string> combined_headers;
     for (auto & hd : default_headers) {
