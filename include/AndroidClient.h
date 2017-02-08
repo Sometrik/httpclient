@@ -63,7 +63,7 @@ class AndroidClientFactory : public HTTPClientFactory {
  AndroidClientFactory(const std::shared_ptr<AndroidClientCache> & _cache, const char * _default_user_agent)
    : HTTPClientFactory(_default_user_agent), cache(_cache) { }
 
-  std::unique_ptr<HTTPClient> createClient(const char * _user_agent, bool _enable_cookies, bool _enable_keepalive) override;
+  std::unique_ptr<HTTPClient> createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) override;
 
  private:
   std::shared_ptr<AndroidClientCache> cache;

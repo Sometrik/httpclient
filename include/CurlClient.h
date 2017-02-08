@@ -8,7 +8,7 @@ class CurlClientFactory : public HTTPClientFactory {
   CurlClientFactory() { }
   CurlClientFactory(const char * _default_user_agent) : HTTPClientFactory(_default_user_agent) { }
 
-  std::unique_ptr<HTTPClient> createClient(const char * _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true) override;
+  std::unique_ptr<HTTPClient> createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) override;
 
   static void globalInit();
   static void globalCleanup();

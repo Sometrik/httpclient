@@ -297,8 +297,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
 std::unique_ptr<HTTPClient>
-CurlClientFactory::createClient(const char * _user_agent, bool _enable_cookies, bool _enable_keepalive) {
-  return std::unique_ptr<CurlClient>(new CurlClient("", _user_agent ? _user_agent : getDefaultUserAgent(), _enable_cookies, _enable_keepalive));
+CurlClientFactory::createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
+  return std::unique_ptr<CurlClient>(new CurlClient("", _user_agent, _enable_cookies, _enable_keepalive));
 }
 
 void
