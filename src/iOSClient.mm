@@ -17,9 +17,11 @@ class iOSClient : public HTTPClient {
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
+#if 0
     if (req.getURI().empty()) {
       return HTTPResponse(0, "empty URI");
     }
+#endif
 
     NSString* url_string = [NSString stringWithUTF8String:req.getURI().c_str()];
 
