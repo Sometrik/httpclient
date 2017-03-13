@@ -138,15 +138,16 @@ public:
     // Gather headers and values
     for (int i = 0; ; i++) {
       jstring jheaderKey = (jstring)env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
+      if (jheaderKey == NULL) {
+        break;
+      }
       const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
       __android_log_print(ANDROID_LOG_INFO, "content", "header key = %s", headerKey);
 
       jstring jheader = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
       const char * header = env->GetStringUTFChars(jheader, 0);
       __android_log_print(ANDROID_LOG_INFO, "content", "header value = %s", header);
-      if (headerKey == NULL) {
-	break;
-      }
+
       callback.handleHeader(headerKey, header);
       env->ReleaseStringUTFChars(jheaderKey, headerKey);
       env->ReleaseStringUTFChars(jheader, header);
@@ -171,7 +172,6 @@ public:
       env->DeleteLocalRef(followURL);
     }
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "nope");
     env->DeleteLocalRef(input);
     env->DeleteLocalRef(connection);
 }
