@@ -56,14 +56,14 @@ public:
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, env->NewStringUTF(req.getURI().c_str()));
 
     jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
-    env->DeleteLocalRef(url),
+    env->DeleteLocalRef(url);
 
     //Authorization example
 //    env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
-//    std::string auth_header = auth.createHeader();
-//    if (!auth_header.empty()) {
-//      env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
-//    }
+    std::string auth_header = auth.createHeader();
+    if (!auth_header.empty()) {
+      env->CallVoidMethod(connection, cache->setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
+    }
 
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
