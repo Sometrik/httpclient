@@ -50,17 +50,20 @@ public:
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
     JNIEnv * env = cache->getJNIEnv();
-    
+
+    __android_log_print(ANDROID_LOG_INFO, "AndroidClien", "Host = %s", req.getURI().c_str());
+
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, env->NewStringUTF(req.getURI().c_str()));
+
     jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
     env->DeleteLocalRef(url),
 
     //Authorization example
-    //env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
-    //  std::string auth_header = auth.createHeader();
-    // if (!auth_header.empty()) {
-    //		env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
-    //}
+//    env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
+//    std::string auth_header = auth.createHeader();
+//    if (!auth_header.empty()) {
+//      env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF(auth.getHeaderName()), env->NewStringUTF(auth_header.c_str()));
+//    }
 
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
@@ -90,17 +93,18 @@ public:
       env->ReleaseStringUTFChars(secondHeader, hd.second.c_str());
     }
 
-    env->CallVoidMethod(connection, cache->setRequestMethod, env->NewStringUTF(req.getTypeString()));
 
+    env->CallVoidMethod(connection, cache->setRequestMethod, env->NewStringUTF(req.getTypeString()));
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
+    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "the real problem is here?");
     // Server not found error
     if (env->ExceptionCheck()) {
       jthrowable error = env->ExceptionOccurred();
+      env->ExceptionClear();
       env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
       env->DeleteLocalRef(error);
 
-      env->ExceptionClear();
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
       callback.handleResultCode(500);
       // callback->handleResultText("Server not found");
@@ -167,6 +171,7 @@ public:
       env->DeleteLocalRef(followURL);
     }
 
+    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "nope");
     env->DeleteLocalRef(input);
     env->DeleteLocalRef(connection);
 }
