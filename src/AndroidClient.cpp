@@ -25,13 +25,12 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) {
   readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
   urlConstructor = env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
   openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
-  setUseCachesMethod = env->GetMethodID(urlConnectionClass, "setUseCaches", "(B)V");
+  setUseCachesMethod = env->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
   disconnectConnectionMethod = env->GetMethodID(httpClass, "disconnect", "()V");
   setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
   setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
   setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
   setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
-  connectMethod = env->GetMethodID(httpClass, "connect", "()V");
   getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
   getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
   setRequestPropertyMethod = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
@@ -75,7 +74,6 @@ public:
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "created url string");
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, juri);
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "created url object");
-    env->ReleaseStringUTFChars(juri, req.getURI().c_str());
     env->DeleteLocalRef(juri);
 
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Creating connection");
@@ -90,8 +88,6 @@ public:
       jstring jheaderName = env->NewStringUTF(auth.getHeaderName());
       jstring jheader = env->NewStringUTF(auth_header.c_str());
       env->CallVoidMethod(connection, cache->setRequestPropertyMethod, jheaderName, jheader);
-      env->ReleaseStringUTFChars(jheaderName, auth.getHeaderName());
-      env->ReleaseStringUTFChars(jheader, auth_header.c_str());
       env->DeleteLocalRef(jheaderName);
       env->DeleteLocalRef(jheader);
     }
@@ -105,8 +101,6 @@ public:
     jstring juser_agent = env->NewStringUTF(user_agent.c_str());
     jstring juser_agent_key = env->NewStringUTF(cuser_agent_key);
     env->CallVoidMethod(connection, cache->setRequestProperty, juser_agent_key, juser_agent);
-    env->ReleaseStringUTFChars(juser_agent, user_agent.c_str());
-    env->ReleaseStringUTFChars(juser_agent_key, cuser_agent_key);
     env->DeleteLocalRef(juser_agent);
     env->DeleteLocalRef(juser_agent_key);
 
@@ -134,8 +128,6 @@ public:
       jstring firstHeader = env->NewStringUTF(hd.first.c_str());
       jstring secondHeader = env->NewStringUTF(hd.second.c_str());
       env->CallVoidMethod(connection, cache->setRequestPropertyMethod, firstHeader, secondHeader);
-      env->ReleaseStringUTFChars(firstHeader, hd.first.c_str());
-      env->ReleaseStringUTFChars(secondHeader, hd.second.c_str());
       env->DeleteLocalRef(firstHeader);
       env->DeleteLocalRef(secondHeader);
       __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Some Combined header set");
@@ -145,7 +137,6 @@ public:
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "About to get response code");
     jstring jTypeString = env->NewStringUTF(req.getTypeString());
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
-    env->ReleaseStringUTFChars(jTypeString, req.getTypeString());
     env->DeleteLocalRef(jTypeString);
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
@@ -165,14 +156,14 @@ public:
 
     callback.handleResultCode(responseCode);
 
-    const char *errorMessage = "";
     jobject input;
 
     if (responseCode >= 400 && responseCode <= 599) {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i for url %s", responseCode, req.getURI().c_str());
       jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
-      errorMessage = env->GetStringUTFChars(javaMessage, 0);
+      const char *errorMessage = env->GetStringUTFChars(javaMessage, 0);
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
+      env->ReleaseStringUTFChars(javaMessage, errorMessage);
       env->DeleteLocalRef(javaMessage);
       input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
     } else {
@@ -201,8 +192,6 @@ public:
       __android_log_print(ANDROID_LOG_INFO, "content", "header value = %s", header);
 
       callback.handleHeader(headerKey, header);
-      env->ReleaseStringUTFChars(jheaderKey, headerKey);
-      env->ReleaseStringUTFChars(jheader, header);
       env->DeleteLocalRef(jheaderKey);
       env->DeleteLocalRef(jheader);
     }
@@ -224,8 +213,6 @@ public:
       const char *followString = env->GetStringUTFChars(followURL, 0);
       callback.handleRedirectUrl(followString);
       __android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
-      env->ReleaseStringUTFChars(followURL, followString);
-      env->ReleaseStringUTFChars(jlocation, locationChar);
       env->DeleteLocalRef(followURL);
       env->DeleteLocalRef(jlocation);
     }
@@ -244,6 +231,7 @@ public:
       return;
     }
 
+    env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
     cache->getJavaVM()->DetachCurrentThread();
 }
 
