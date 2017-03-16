@@ -104,16 +104,6 @@ public:
     env->DeleteLocalRef(juser_agent);
     env->DeleteLocalRef(juser_agent_key);
 
-    if (env->ExceptionCheck()) {
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception at piip of AndroidClient");
-      jthrowable error = env->ExceptionOccurred();
-      env->ExceptionClear();
-      env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
-      env->DeleteLocalRef(error);
-      // callback->handleResultText("Server not found");
-      return;
-    }
-
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Setting headers");
     // Setting headers for request
     std::map<std::string, std::string> combined_headers;
@@ -147,9 +137,11 @@ public:
       env->ExceptionClear();
       env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
       env->DeleteLocalRef(error);
+      env->DeleteLocalRef(connection);
 
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
       callback.handleResultCode(500);
+
       // callback->handleResultText("Server not found");
       return;
     }
@@ -218,20 +210,9 @@ public:
     }
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Client done");
 
+    env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
     env->DeleteLocalRef(input);
     env->DeleteLocalRef(connection);
-
-    if (env->ExceptionCheck()) {
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception at the end of AndroidClient");
-      jthrowable error = env->ExceptionOccurred();
-      env->ExceptionClear();
-      env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
-      env->DeleteLocalRef(error);
-      // callback->handleResultText("Server not found");
-      return;
-    }
-
-    env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
     cache->getJavaVM()->DetachCurrentThread();
 }
 
