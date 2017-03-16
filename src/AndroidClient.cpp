@@ -3,71 +3,78 @@
 #include <android/log.h>
 #include <vector>
 
-AndroidClientCache::AndroidClientCache(JNIEnv * _env) {
-  _env->GetJavaVM(&javaVM);
-  env = _env;
-  JavaVMAttachArgs args;
-  args.version = JNI_VERSION_1_6; // choose your JNI version
-  args.name = NULL; // you might want to give the java thread a name
-  args.group = NULL; // you might want to assign the java thread to a ThreadGroup
-  javaVM->AttachCurrentThread(&env, &args);
+AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
+  myEnv->GetJavaVM(&javaVM);
+  cookieManagerClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("android/webkit/CookieManager"));
+  httpClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/HttpURLConnection"));
+  urlClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URL"));
+  urlConnectionClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URLConnection"));
+  inputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/InputStream"));
+  frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
 
-  cookieManagerClass = (jclass) env->NewGlobalRef(env->FindClass("android/webkit/CookieManager"));
-  httpClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/HttpURLConnection"));
-  urlClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/URL"));
-  urlConnectionClass = (jclass) env->NewGlobalRef(env->FindClass("java/net/URLConnection"));
-  inputStreamClass = (jclass) env->NewGlobalRef(env->FindClass("java/io/InputStream"));
-  frameworkClass = (jclass) env->NewGlobalRef(env->FindClass("com/sometrik/framework/FrameWork"));
-
-  getHeaderMethod = env->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
-  getHeaderMethodInt = env->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
-  getHeaderKeyMethod = env->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
-  readMethod = env->GetMethodID(inputStreamClass, "read", "([B)I");
-  urlConstructor = env->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
-  openConnectionMethod = env->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
-  setUseCachesMethod = env->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
-  disconnectConnectionMethod = env->GetMethodID(httpClass, "disconnect", "()V");
-  setRequestProperty = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-  setRequestMethod = env->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
-  setFollowMethod = env->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
-  setDoInputMethod = env->GetMethodID(httpClass, "setDoInput", "(Z)V");
-  getResponseCodeMethod = env->GetMethodID(httpClass, "getResponseCode", "()I");
-  getResponseMessageMethod = env->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
-  setRequestPropertyMethod = env->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-  clearCookiesMethod = env->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
-  getInputStreamMethod = env->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
-  getErrorStreamMethod = env->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
-  handleThrowableMethod = env->GetStaticMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
+  getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
+  getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
+  getHeaderKeyMethod = myEnv->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
+  readMethod = myEnv->GetMethodID(inputStreamClass, "read", "([B)I");
+  urlConstructor = myEnv->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
+  openConnectionMethod = myEnv->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
+  setUseCachesMethod = myEnv->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
+  disconnectConnectionMethod = myEnv->GetMethodID(httpClass, "disconnect", "()V");
+  setRequestProperty = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+  setRequestMethod = myEnv->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
+  setFollowMethod = myEnv->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
+  setDoInputMethod = myEnv->GetMethodID(httpClass, "setDoInput", "(Z)V");
+  getResponseCodeMethod = myEnv->GetMethodID(httpClass, "getResponseCode", "()I");
+  getResponseMessageMethod = myEnv->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
+  setRequestPropertyMethod = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+  clearCookiesMethod = myEnv->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+  getInputStreamMethod = myEnv->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+  getErrorStreamMethod = myEnv->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+  handleThrowableMethod = myEnv->GetStaticMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
 }
 
 AndroidClientCache::~AndroidClientCache() {
   __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClien", "destructor on clientCache");
-  auto env = getJNIEnv();
-  env->DeleteGlobalRef(cookieManagerClass);
-  env->DeleteGlobalRef(httpClass);
-  env->DeleteGlobalRef(urlClass);
-  env->DeleteGlobalRef(inputStreamClass);
-  env->DeleteGlobalRef(frameworkClass);
-  checkDetaching();
+  myEnv->DeleteGlobalRef(cookieManagerClass);
+  myEnv->DeleteGlobalRef(httpClass);
+  myEnv->DeleteGlobalRef(urlClass);
+  myEnv->DeleteGlobalRef(inputStreamClass);
+  myEnv->DeleteGlobalRef(frameworkClass);
 }
 
 class AndroidClient : public HTTPClient {
 public:
   AndroidClient(const std::shared_ptr<AndroidClientCache> & _cache, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
+
   }
 
 
 
   ~AndroidClient(){
     __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Destructor of androidClient");
-    cache->checkDetaching();
+//    cache->checkDetaching();
     __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "androidClient destructor done");
-//    cache->getJavaVM()->DetachCurrentThread();
+   if (stored_env) {
+       cache->getJavaVM()->DetachCurrentThread();
+   }
+  }
+
+  JNIEnv * getEnv() {
+    if (stored_env) return stored_env;
+    else {
+      stored_env = cache->createJNIEnv();
+      // cache->checkEnvAttachment(&env);
+      return stored_env;
+    }
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
-    JNIEnv * env = cache->getJNIEnv();
+    JNIEnv * env = getEnv();
+
+    if (env == 0){
+      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Env was null on request start");
+    }
 
     __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s", req.getURI().c_str());
     jstring juri = env->NewStringUTF(req.getURI().c_str());
@@ -124,33 +131,31 @@ public:
     }
 
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "About to get response code");
+    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Preparing to get response code");
     jstring jTypeString = env->NewStringUTF(req.getTypeString());
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
     env->DeleteLocalRef(jTypeString);
+
+    if (env->ExceptionCheck()) {
+
+      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "We fucked up");
+    }
+    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "About to get response code");
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "the real problem is here?");
-    // Server not found error
-    if (env->ExceptionCheck()) {
-      jthrowable error = env->ExceptionOccurred();
-      env->ExceptionClear();
-      env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
-      env->DeleteLocalRef(error);
-      env->DeleteLocalRef(connection);
+    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "got response code");
 
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
-      callback.handleResultCode(500);
-
-      // callback->handleResultText("Server not found");
-      return;
-    }
-
-    callback.handleResultCode(responseCode);
 
     jobject input;
 
-    if (responseCode >= 400 && responseCode <= 599) {
+    if (env->ExceptionCheck()) {
+
+      jthrowable error = env->ExceptionOccurred();
+      env->ExceptionClear();
+//      env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
+      env->DeleteLocalRef(error);
+
+      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i for url %s", responseCode, req.getURI().c_str());
       jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
       const char *errorMessage = env->GetStringUTFChars(javaMessage, 0);
@@ -158,11 +163,20 @@ public:
       env->ReleaseStringUTFChars(javaMessage, errorMessage);
       env->DeleteLocalRef(javaMessage);
       input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
+
+      callback.handleResultCode(500);
+
     } else {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
 
       input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
-      env->ExceptionClear();
+      callback.handleResultCode(responseCode);
+
+      if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting stream");
+        input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
+      }
     }
 
     jbyteArray array = env->NewByteArray(4096);
@@ -177,13 +191,17 @@ public:
         break;
       }
       const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
-      __android_log_print(ANDROID_LOG_INFO, "content", "header key = %s", headerKey);
 
       jstring jheader = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
       const char * header = env->GetStringUTFChars(jheader, 0);
-      __android_log_print(ANDROID_LOG_INFO, "content", "header value = %s", header);
+      __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
 
       callback.handleHeader(headerKey, header);
+
+      if (strcasecmp(headerKey, "Location") == 0 ) {
+        callback.handleRedirectUrl(header);
+      }
+
       env->DeleteLocalRef(jheaderKey);
       env->DeleteLocalRef(jheader);
     }
@@ -191,6 +209,12 @@ public:
 
     // Gather content
     while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
+
+      if (env->ExceptionCheck()) {
+        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
+        env->ExceptionClear();
+        break;
+      }
       jbyte* content_array = env->GetByteArrayElements(array, NULL);
       callback.handleChunk(g, (char*) content_array);
       env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
@@ -198,22 +222,11 @@ public:
     env->DeleteLocalRef(array);
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
 
-    if (responseCode >= 300 && responseCode <= 399) {
-      const char * locationChar = "location";
-      jstring jlocation = env->NewStringUTF(locationChar);
-      jstring followURL = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethod, jlocation);
-      const char *followString = env->GetStringUTFChars(followURL, 0);
-      callback.handleRedirectUrl(followString);
-      __android_log_print(ANDROID_LOG_INFO, "content", "followURL = %s", followString);
-      env->DeleteLocalRef(followURL);
-      env->DeleteLocalRef(jlocation);
-    }
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Client done");
-
     env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
     env->DeleteLocalRef(input);
     env->DeleteLocalRef(connection);
     cache->getJavaVM()->DetachCurrentThread();
+    stored_env = 0;
 }
 
   void clearCookies() {
@@ -223,6 +236,7 @@ public:
 
 private:
   std::shared_ptr<AndroidClientCache> cache;
+  JNIEnv * stored_env = 0;
 };
 
 std::unique_ptr<HTTPClient>

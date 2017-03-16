@@ -12,25 +12,20 @@ class AndroidClientCache {
   AndroidClientCache(JNIEnv * _env);
   ~AndroidClientCache();
 
-  JNIEnv * getJNIEnv() {
+  JNIEnv * createJNIEnv() {
+    JNIEnv * env = 0;
+//    javaVM->GetEnv((void**)&Myenv, JNI_VERSION_1_6);
 
-//    JNIEnv *Myenv = NULL;
-//    javaVM->GetEnv((void**)&Myenv, JNI_VERSION_1_6);''
-    if (javaVM->GetEnv((void**)&env, JNI_VERSION_1_2) == JNI_EDETACHED) {
-      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Client Env was null. Attaching");
-
-      JavaVMAttachArgs args;
-      args.version = JNI_VERSION_1_6; // choose your JNI version
-      args.name = NULL; // you might want to give the java thread a name
-      args.group = NULL; // you might want to assign the java thread to a ThreadGroup
-      javaVM->AttachCurrentThread(&env, &args);
-      return env;
-    } else {
-      return env;
-    }
+    JavaVMAttachArgs args;
+    args.version = JNI_VERSION_1_6; // choose your JNI version
+    args.name = NULL; // you might want to give the java thread a name
+    args.group = NULL; // you might want to assign the java thread to a ThreadGroup
+    javaVM->AttachCurrentThread(&env, &args);
+    javaVM->GetEnv((void**) &env, JNI_VERSION_1_6);
+    return env;
   }
 
-  void checkDetaching(){
+  void checkDetaching(JNIEnv * env){
     if (javaVM->GetEnv((void**) &env, JNI_VERSION_1_2) == JNI_EDETACHED) {
       __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "JavaVM was detached");
     } else {
@@ -57,7 +52,6 @@ class AndroidClientCache {
   jmethodID setRequestProperty;
   jmethodID setRequestMethod;
   jmethodID setDoInputMethod;
-  jmethodID connectMethod;
   jmethodID getResponseCodeMethod;
   jmethodID getResponseMessageMethod;
   jmethodID setRequestPropertyMethod;
@@ -81,7 +75,7 @@ class AndroidClientCache {
 
  private:
   JavaVM * javaVM;
-  JNIEnv * env;
+  JNIEnv * myEnv;
 };
 
 class AndroidClientFactory : public HTTPClientFactory {
