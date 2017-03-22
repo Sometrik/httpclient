@@ -1,7 +1,7 @@
 #include "OAuth.h"
 
 #include "Base64.h"
-#include "sha1.h"
+#include "SHA1.h"
 #include "URI.h"
 
 #include <iostream>
