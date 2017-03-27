@@ -53,7 +53,6 @@ public:
 
   ~AndroidClient(){
     __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Destructor of androidClient");
-//    cache->checkDetaching();
     __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "androidClient destructor done");
    if (stored_env) {
        cache->getJavaVM()->DetachCurrentThread();
@@ -135,35 +134,17 @@ public:
     jstring jTypeString = env->NewStringUTF(req.getTypeString());
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
     env->DeleteLocalRef(jTypeString);
-
-    if (env->ExceptionCheck()) {
-
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "We fucked up");
-    }
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "About to get response code");
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "got response code");
 
 
-    jobject input;
+    jobject input = 0;
 
     if (env->ExceptionCheck()) {
-
-      jthrowable error = env->ExceptionOccurred();
       env->ExceptionClear();
-//      env->CallStaticVoidMethod(cache->frameworkClass, cache->handleThrowableMethod, error);
-      env->DeleteLocalRef(error);
-
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "EXCEPTION http request responsecode = %i", responseCode);
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "request responsecode = %i for url %s", responseCode, req.getURI().c_str());
-      jstring javaMessage = (jstring)env->CallObjectMethod(connection, cache->getResponseMessageMethod);
-      const char *errorMessage = env->GetStringUTFChars(javaMessage, 0);
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "errorMessage = %s", errorMessage);
-      env->ReleaseStringUTFChars(javaMessage, errorMessage);
-      env->DeleteLocalRef(javaMessage);
-      input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
-
+      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "EXCEPTION http request failed");
       callback.handleResultCode(500);
 
     } else {
@@ -178,55 +159,59 @@ public:
         input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
       }
     }
+    if (input != 0) {
+      jbyteArray array = env->NewByteArray(4096);
+      int g = 0;
 
-    jbyteArray array = env->NewByteArray(4096);
-    int g = 0;
+      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
+      // Gather headers and values
+      for (int i = 0;; i++) {
+        jstring jheaderKey = (jstring) env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
+        if (jheaderKey == NULL) {
+          break;
+        }
+        const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
 
-    // Gather headers and values
-    for (int i = 0; ; i++) {
-      jstring jheaderKey = (jstring)env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
-      if (jheaderKey == NULL) {
-        break;
+        jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
+        const char * header = env->GetStringUTFChars(jheader, 0);
+        __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
+
+        callback.handleHeader(headerKey, header);
+
+        if (strcasecmp(headerKey, "Location") == 0) {
+          callback.handleRedirectUrl(header);
+        }
+
+        env->DeleteLocalRef(jheaderKey);
+        env->DeleteLocalRef(jheader);
       }
-      const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
+      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Headers gotten");
 
-      jstring jheader = (jstring)env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
-      const char * header = env->GetStringUTFChars(jheader, 0);
-      __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
+      // Gather content
+      while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
 
-      callback.handleHeader(headerKey, header);
-
-      if (strcasecmp(headerKey, "Location") == 0 ) {
-        callback.handleRedirectUrl(header);
+        if (env->ExceptionCheck()) {
+          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
+          env->ExceptionClear();
+          break;
+        }
+        jbyte* content_array = env->GetByteArrayElements(array, NULL);
+        callback.handleChunk(g, (char*) content_array);
+        env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
       }
 
-      env->DeleteLocalRef(jheaderKey);
-      env->DeleteLocalRef(jheader);
+      env->DeleteLocalRef(array);
+      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
+
+      env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
+      env->DeleteLocalRef(input);
     }
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Headers gotten");
-
-    // Gather content
-    while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
-
-      if (env->ExceptionCheck()) {
-        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
-        env->ExceptionClear();
-        break;
-      }
-      jbyte* content_array = env->GetByteArrayElements(array, NULL);
-      callback.handleChunk(g, (char*) content_array);
-      env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-    }
-    env->DeleteLocalRef(array);
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
-
-    env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
-    env->DeleteLocalRef(input);
     env->DeleteLocalRef(connection);
     cache->getJavaVM()->DetachCurrentThread();
     stored_env = 0;
+
+  }
 }
 
   void clearCookies() {
