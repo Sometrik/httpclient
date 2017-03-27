@@ -201,8 +201,9 @@ public:
         env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
       }
 
-      env->DeleteLocalRef(array);
       __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
+      callback.handleDisconnect();
+      env->DeleteLocalRef(array);
 
       env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
       env->DeleteLocalRef(input);
