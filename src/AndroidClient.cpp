@@ -211,7 +211,6 @@ public:
     cache->getJavaVM()->DetachCurrentThread();
     stored_env = 0;
 
-  }
 }
 
   void clearCookies() {
