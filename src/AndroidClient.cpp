@@ -47,6 +47,7 @@ public:
   AndroidClient(const std::shared_ptr<AndroidClientCache> & _cache, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
 
+    __android_log_print(ANDROID_LOG_INFO, "Sometrik", "new AndroidClient. No Attach yet");
   }
 
 
@@ -163,7 +164,7 @@ public:
       jbyteArray array = env->NewByteArray(4096);
       int g = 0;
 
-      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
+//      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
 
       // Gather headers and values
       for (int i = 0;; i++) {
@@ -175,7 +176,7 @@ public:
 
         jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
         const char * header = env->GetStringUTFChars(jheader, 0);
-        __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
+//        __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
 
         callback.handleHeader(headerKey, header);
 
@@ -186,7 +187,7 @@ public:
         env->DeleteLocalRef(jheaderKey);
         env->DeleteLocalRef(jheader);
       }
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Headers gotten");
+//      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Headers gotten");
 
       // Gather content
       while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
@@ -201,7 +202,7 @@ public:
         env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
       }
 
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
+//      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
       callback.handleDisconnect();
       env->DeleteLocalRef(array);
 
