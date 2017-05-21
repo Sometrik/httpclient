@@ -161,9 +161,6 @@ public:
       }
     }
     if (input != 0) {
-      jbyteArray array = env->NewByteArray(4096);
-      int g = 0;
-
 //      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
 
       // Gather headers and values
@@ -190,6 +187,8 @@ public:
 //      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Headers gotten");
 
       // Gather content
+      jbyteArray array = env->NewByteArray(4096);
+      int g = 0;
       while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
 
         if (env->ExceptionCheck()) {
@@ -198,13 +197,16 @@ public:
           break;
         }
         jbyte* content_array = env->GetByteArrayElements(array, NULL);
-        callback.handleChunk(g, (char*) content_array);
+        bool r = callback.handleChunk(g, (char*) content_array);
         env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
+	if (!r) {
+	  break;
+	}
       }
+      env->DeleteLocalRef(array);
 
 //      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
       callback.handleDisconnect();
-      env->DeleteLocalRef(array);
 
       env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
       env->DeleteLocalRef(input);
@@ -212,7 +214,6 @@ public:
     env->DeleteLocalRef(connection);
     cache->getJavaVM()->DetachCurrentThread();
     stored_env = 0;
-
 }
 
   void clearCookies() {
