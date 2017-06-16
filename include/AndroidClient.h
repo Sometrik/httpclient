@@ -38,8 +38,6 @@ class AndroidClientCache {
 
   jclass cookieManagerClass;
   jmethodID clearCookiesMethod;
-  jclass bitmapClass;
-  jclass factoryClass;
   jclass httpClass;
   jclass urlClass;
   jclass urlConnectionClass;
