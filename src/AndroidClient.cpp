@@ -91,6 +91,7 @@ public:
     //Authorization example
 //    env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
     std::string auth_header = auth.createHeader();
+#if 0
     if (!auth_header.empty()) {
       jstring jheaderName = env->NewStringUTF(auth.getHeaderName());
       jstring jheader = env->NewStringUTF(auth_header.c_str());
@@ -98,9 +99,10 @@ public:
       env->DeleteLocalRef(jheaderName);
       env->DeleteLocalRef(jheader);
     }
-
+#endif
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
+#if 0
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Applying user agent");
     //Apply user agent
     const char * cuser_agent = user_agent.c_str();
@@ -110,15 +112,20 @@ public:
     env->CallVoidMethod(connection, cache->setRequestProperty, juser_agent_key, juser_agent);
     env->DeleteLocalRef(juser_agent);
     env->DeleteLocalRef(juser_agent_key);
-
+#endif
+    
     __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Setting headers");
     // Setting headers for request
     std::map<std::string, std::string> combined_headers;
     for (auto & hd : default_headers) {
       combined_headers[hd.first] = hd.second;
     }
+    combined_headers["User-Agent"] = user_agent;
     for (auto & hd : req.getHeaders()) {
       combined_headers[hd.first] = hd.second;
+    }
+    if (!auth_header.empty()) {
+      combined_headers[auth.getHeaderName()] = auth_header;
     }
     for (auto & hd : combined_headers) {
       __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Setting some combined header");
