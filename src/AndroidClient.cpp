@@ -105,7 +105,7 @@ public:
     }
 
     if (req.getType() == HTTPRequest::POST) {
-      env->CallVoidMethod(connection, cache->setDoOutputMetod, true);
+      env->CallVoidMethod(connection, cache->setDoOutputMethod, true);
     } else {
       env->CallVoidMethod(connection, cache->setDoOutputMethod, false);
       if (req.getType() != HTTPRequest::GET) {
