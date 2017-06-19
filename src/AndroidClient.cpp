@@ -92,7 +92,7 @@ public:
       combined_headers[hd.first] = hd.second;
     }
     if (!auth_header.empty()) {
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Auth: %s = %s", auth.getHeaderName().c_str(), auth_header.c_str());
+      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Auth: %s = %s", auth.getHeaderName(), auth_header.c_str());
       combined_headers[auth.getHeaderName()] = auth_header;
     }
     for (auto & hd : combined_headers) {
