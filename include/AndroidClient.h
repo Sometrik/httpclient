@@ -50,6 +50,7 @@ class AndroidClientCache {
   jmethodID setRequestProperty;
   jmethodID setRequestMethod;
   jmethodID setDoInputMethod;
+  jmethodID setDoOutputMethod;
   jmethodID getResponseCodeMethod;
   jmethodID getResponseMessageMethod;
   jmethodID setRequestPropertyMethod;
