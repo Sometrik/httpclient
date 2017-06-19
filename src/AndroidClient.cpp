@@ -104,16 +104,10 @@ public:
       env->DeleteLocalRef(secondHeader);
     }
 
-    if (req.getType() == HTTPRequest::POST) {
-      env->CallVoidMethod(connection, cache->setDoOutputMethod, true);
-    } else {
-      env->CallVoidMethod(connection, cache->setDoOutputMethod, false);
-      if (req.getType() != HTTPRequest::GET) {
-	jstring jTypeString = env->NewStringUTF(req.getTypeString());
-	env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
-	env->DeleteLocalRef(jTypeString);
-      }
-    }
+    env->CallVoidMethod(connection, cache->setDoOutputMethod, req.getType() == HTTPRequest::POST);
+    jstring jTypeString = env->NewStringUTF(req.getTypeString());
+    env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
+    env->DeleteLocalRef(jTypeString);
     
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
