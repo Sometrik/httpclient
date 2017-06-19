@@ -46,15 +46,11 @@ class AndroidClient : public HTTPClient {
 public:
   AndroidClient(const std::shared_ptr<AndroidClientCache> & _cache, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
-
-    __android_log_print(ANDROID_LOG_INFO, "Sometrik", "new AndroidClient. No Attach yet");
   }
 
 
 
   ~AndroidClient(){
-    __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Destructor of androidClient");
-    __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "androidClient destructor done");
    if (stored_env) {
        cache->getJavaVM()->DetachCurrentThread();
    }
@@ -72,18 +68,11 @@ public:
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
     JNIEnv * env = getEnv();
 
-    if (env == 0){
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Env was null on request start");
-    }
-
-    __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s", req.getURI().c_str());
+    __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
     jstring juri = env->NewStringUTF(req.getURI().c_str());
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "created url string");
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, juri);
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "created url object");
     env->DeleteLocalRef(juri);
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Creating connection");
     jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
     env->CallVoidMethod(connection, cache->setUseCachesMethod, JNI_FALSE);
     env->DeleteLocalRef(url);
@@ -91,30 +80,8 @@ public:
     //Authorization example
 //    env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
     std::string auth_header = auth.createHeader();
-#if 0
-    if (!auth_header.empty()) {
-      jstring jheaderName = env->NewStringUTF(auth.getHeaderName());
-      jstring jheader = env->NewStringUTF(auth_header.c_str());
-      env->CallVoidMethod(connection, cache->setRequestPropertyMethod, jheaderName, jheader);
-      env->DeleteLocalRef(jheaderName);
-      env->DeleteLocalRef(jheader);
-    }
-#endif
-    env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
+   env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
-#if 0
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Applying user agent");
-    //Apply user agent
-    const char * cuser_agent = user_agent.c_str();
-    const char * cuser_agent_key = "User-Agent";
-    jstring juser_agent = env->NewStringUTF(user_agent.c_str());
-    jstring juser_agent_key = env->NewStringUTF(cuser_agent_key);
-    env->CallVoidMethod(connection, cache->setRequestProperty, juser_agent_key, juser_agent);
-    env->DeleteLocalRef(juser_agent);
-    env->DeleteLocalRef(juser_agent_key);
-#endif
-    
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Setting headers");
     // Setting headers for request
     std::map<std::string, std::string> combined_headers;
     for (auto & hd : default_headers) {
@@ -125,28 +92,21 @@ public:
       combined_headers[hd.first] = hd.second;
     }
     if (!auth_header.empty()) {
+      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Auth: %s = %s", auth.getHeaderName().c_str(), auth_header.c_str());
       combined_headers[auth.getHeaderName()] = auth_header;
     }
     for (auto & hd : combined_headers) {
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Setting some combined header");
       jstring firstHeader = env->NewStringUTF(hd.first.c_str());
       jstring secondHeader = env->NewStringUTF(hd.second.c_str());
       env->CallVoidMethod(connection, cache->setRequestPropertyMethod, firstHeader, secondHeader);
       env->DeleteLocalRef(firstHeader);
       env->DeleteLocalRef(secondHeader);
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Some Combined header set");
     }
 
-
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Preparing to get response code");
     jstring jTypeString = env->NewStringUTF(req.getTypeString());
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
     env->DeleteLocalRef(jTypeString);
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "About to get response code");
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
-
-    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "got response code");
-
 
     jobject input = 0;
 
@@ -168,8 +128,6 @@ public:
       }
     }
     if (input != 0) {
-//      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "Starting to gather content");
-
       // Gather headers and values
       for (int i = 0;; i++) {
         jstring jheaderKey = (jstring) env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
@@ -180,7 +138,7 @@ public:
 
         jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
         const char * header = env->GetStringUTFChars(jheader, 0);
-//        __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
+        __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
 
         callback.handleHeader(headerKey, header);
 
@@ -191,7 +149,6 @@ public:
         env->DeleteLocalRef(jheaderKey);
         env->DeleteLocalRef(jheader);
       }
-//      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Headers gotten");
 
       // Gather content
       jbyteArray array = env->NewByteArray(4096);
@@ -212,7 +169,6 @@ public:
       }
       env->DeleteLocalRef(array);
 
-//      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Content gathered");
       callback.handleDisconnect();
 
       env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
