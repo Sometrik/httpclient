@@ -89,6 +89,9 @@ public:
       combined_headers[hd.first] = hd.second;
     }
     combined_headers["User-Agent"] = user_agent;
+    if (req.getType() == HTTPRequest::POST && !req.getContentType().empty()) {
+      combined_headers["Content-Type"] = req.getContentType();
+    }
     for (auto & hd : req.getHeaders()) {
       combined_headers[hd.first] = hd.second;
     }
@@ -141,7 +144,7 @@ public:
 
         jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
         const char * header = env->GetStringUTFChars(jheader, 0);
-        __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
+        // __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
 
         callback.handleHeader(headerKey, header);
 
