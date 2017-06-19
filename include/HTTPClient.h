@@ -48,6 +48,14 @@ class HTTPClient {
     request(req, auth, callback);
   }
 
+  void Get(const std::string & uri, const std::string & data, const Authorization & auth, HTTPClientInterface & callback) {
+    std::string uri2 = uri;
+    uri2 += '?';
+    uri2 += data;
+    HTTPRequest req(HTTPRequest::GET, uri2);    
+    request(req, auth, callback);
+  }
+
   HTTPResponse Get(const std::string & uri, const std::string & data, const Authorization & auth, bool follow_location = true, int timeout = 0) {
     std::string uri2 = uri;
     uri2 += '?';
