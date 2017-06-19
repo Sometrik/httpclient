@@ -24,6 +24,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
   setRequestMethod = myEnv->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
   setFollowMethod = myEnv->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
   setDoInputMethod = myEnv->GetMethodID(httpClass, "setDoInput", "(Z)V");
+  setDoOutputMethod = myEnv->GetMethodID(httpClass, "setDoOutput", "(Z)V");
   getResponseCodeMethod = myEnv->GetMethodID(httpClass, "getResponseCode", "()I");
   getResponseMessageMethod = myEnv->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
   setRequestPropertyMethod = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
@@ -103,9 +104,16 @@ public:
       env->DeleteLocalRef(secondHeader);
     }
 
-    jstring jTypeString = env->NewStringUTF(req.getTypeString());
-    env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
-    env->DeleteLocalRef(jTypeString);
+    if (req.getType() == HTTPRequest::GET) {
+      env->CallVoidMethod(connection, cache->setDoOutput, false);
+    } else if (req.getType() == HTTPRequest::POST) {
+      env->CallVoidMethod(connection, cache->setDoOutput, true);
+    } else {
+      jstring jTypeString = env->NewStringUTF(req.getTypeString());
+      env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
+      env->DeleteLocalRef(jTypeString);
+    }
+    
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
     jobject input = 0;
