@@ -3,6 +3,15 @@
 #include <android/log.h>
 #include <vector>
 
+
+
+static jbyteArray convertToByteArray(JNIEnv * env, const std::string & s) {
+  const jbyte * pNativeMessage = reinterpret_cast<const jbyte*>(s.c_str());
+  jbyteArray bytes = env->NewByteArray(s.size());
+  env->SetByteArrayRegion(bytes, 0, s.size(), pNativeMessage);
+  return bytes;
+}
+
 AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
   myEnv->GetJavaVM(&javaVM);
   cookieManagerClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("android/webkit/CookieManager"));
@@ -11,6 +20,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
   urlConnectionClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URLConnection"));
   inputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/InputStream"));
   frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
+  outputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/OutputStream"));
 
   getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
   getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
@@ -20,6 +30,10 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
   openConnectionMethod = myEnv->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
   setUseCachesMethod = myEnv->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
   disconnectConnectionMethod = myEnv->GetMethodID(httpClass, "disconnect", "()V");
+  getOutputStreamMethod = myEnv->GetMethodID(urlConnectionClass, "getOutputStream", "()Ljava/io/OutputStream;");
+  outputStreamWriteMethod = myEnv->GetMethodID(outputStreamClass, "write", "([B)V");
+  setChunkedStreamingModeMethod = myEnv->GetMethodID(httpClass, "setChunkedStreamingMode", "(I)V");
+  setFixedLengthStreamingModeMethod = myEnv->GetMethodID(httpClass, "setFixedLengthStreamingMode", "(I)V");
   setRequestProperty = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
   setRequestMethod = myEnv->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
   setFollowMethod = myEnv->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
@@ -41,6 +55,7 @@ AndroidClientCache::~AndroidClientCache() {
   myEnv->DeleteGlobalRef(urlClass);
   myEnv->DeleteGlobalRef(inputStreamClass);
   myEnv->DeleteGlobalRef(frameworkClass);
+  myEnv->DeleteGlobalRef(outputStreamClass);
 }
 
 class AndroidClient : public HTTPClient {
@@ -91,6 +106,7 @@ public:
     combined_headers["User-Agent"] = user_agent;
     if (req.getType() == HTTPRequest::POST && !req.getContentType().empty()) {
       combined_headers["Content-Type"] = req.getContentType();
+//      combined_headers["Content-Length"] = req.getContent().size();
     }
     for (auto & hd : req.getHeaders()) {
       combined_headers[hd.first] = hd.second;
@@ -111,7 +127,25 @@ public:
     jstring jTypeString = env->NewStringUTF(req.getTypeString());
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
     env->DeleteLocalRef(jTypeString);
-    
+
+    if (req.getType() == HTTPRequest::POST) {
+      env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, req.getContent().size());
+      jobject outputStream = env->CallObjectMethod(connection, cache->getOutputStreamMethod);
+
+      for (int i = 0; i < req.getContent().size(); i += 4096) {
+
+        if (env->ExceptionCheck()) {
+          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
+          env->ExceptionClear();
+          break;
+        }
+
+        auto a = convertToByteArray(env, req.getContent().substr(i, 4096));
+        env->CallVoidMethod(outputStream, cache->outputStreamWriteMethod, a);
+        env->DeleteLocalRef(a);
+      }
+    }
+
     int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
 
     jobject input = 0;
@@ -184,6 +218,7 @@ public:
     cache->getJavaVM()->DetachCurrentThread();
     stored_env = 0;
 }
+
 
   void clearCookies() {
 //    JNIEnv * env = cache->getJNIEnv();

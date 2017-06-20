@@ -45,8 +45,13 @@ class AndroidClientCache {
   jclass inputStreamReaderClass;
   jclass inputStreamClass;
   jclass frameworkClass;
+  jclass outputStreamClass;
   jmethodID urlConstructor;
   jmethodID openConnectionMethod;
+  jmethodID getOutputStreamMethod;
+  jmethodID outputStreamWriteMethod;
+  jmethodID setChunkedStreamingModeMethod;
+  jmethodID setFixedLengthStreamingModeMethod;
   jmethodID setRequestProperty;
   jmethodID setRequestMethod;
   jmethodID setDoInputMethod;
