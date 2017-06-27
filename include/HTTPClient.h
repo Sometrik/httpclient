@@ -27,6 +27,8 @@ class HTTPClient {
     HTTPRequest req(HTTPRequest::POST, uri);
     req.setContent(data);
     req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     HTTPResponse response;
     request(req, noAuth, response);
     return response;
@@ -36,6 +38,8 @@ class HTTPClient {
     HTTPRequest req(HTTPRequest::POST, uri);
     req.setContent(data);
     req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     HTTPResponse response;
     request(req, auth, response);
     return response;
@@ -45,6 +49,8 @@ class HTTPClient {
     HTTPRequest req(HTTPRequest::POST, uri);
     req.setContent(data);
     req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     request(req, auth, callback);
   }
 
@@ -52,66 +58,74 @@ class HTTPClient {
     std::string uri2 = uri;
     uri2 += '?';
     uri2 += data;
-    HTTPRequest req(HTTPRequest::GET, uri2);    
+    HTTPRequest req(HTTPRequest::GET, uri2);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     request(req, auth, callback);
   }
 
-  HTTPResponse Get(const std::string & uri, const std::string & data, const Authorization & auth, bool follow_location = true, int timeout = 0) {
+  HTTPResponse Get(const std::string & uri, const std::string & data, const Authorization & auth, bool follow_location = true) {
     std::string uri2 = uri;
     uri2 += '?';
     uri2 += data;
     HTTPRequest req(HTTPRequest::GET, uri2);
     req.setFollowLocation(follow_location);
-    req.setTimeout(timeout);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     HTTPResponse response;
     request(req, auth, response);
     return response;
   }
 
-  HTTPResponse Get(const std::string & uri, const std::string & data, bool follow_location = true, int timeout = 0) {
+  HTTPResponse Get(const std::string & uri, const std::string & data, bool follow_location = true) {
     std::string uri2 = uri;
     uri2 += '?';
     uri2 += data;
     HTTPRequest req(HTTPRequest::GET, uri2);
     req.setFollowLocation(follow_location);
-    req.setTimeout(timeout);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     HTTPResponse response;
     request(req, noAuth, response);
     return response;
   }
 
-  void Get(const std::string & uri, const std::string & data, HTTPClientInterface & callback, bool follow_location = true, int timeout = 0) {
+  void Get(const std::string & uri, const std::string & data, HTTPClientInterface & callback, bool follow_location = true) {
     std::string uri2 = uri;
     uri2 += '?';
     uri2 += data;
     HTTPRequest req(HTTPRequest::GET, uri2);
     req.setFollowLocation(follow_location);
-    req.setTimeout(timeout);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     request(req, noAuth, callback);
   }
 
-  HTTPResponse Get(const std::string & uri, bool follow_location = true, int timeout = 0) {
+  HTTPResponse Get(const std::string & uri, bool follow_location = true) {
     HTTPRequest req(HTTPRequest::GET, uri);
     req.setFollowLocation(follow_location);
-    req.setTimeout(timeout);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     HTTPResponse response;
     request(req, noAuth, response);
     return response;
   }
   
-  HTTPResponse Get(const std::string & uri, const Authorization & auth, bool follow_location = true, int timeout = 0) {
+  HTTPResponse Get(const std::string & uri, const Authorization & auth, bool follow_location = true) {
     HTTPRequest req(HTTPRequest::GET, uri);
     req.setFollowLocation(follow_location);
-    req.setTimeout(timeout);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     HTTPResponse response;
     request(req, auth, response);
     return response;
   }
 
-  void Get(const std::string & uri, HTTPClientInterface & callback, bool follow_location = true, int timeout = 0) {
+  void Get(const std::string & uri, HTTPClientInterface & callback, bool follow_location = true) {
     HTTPRequest req(HTTPRequest::GET, uri);
     req.setFollowLocation(follow_location);
-    req.setTimeout(timeout);
+    req.setConnectTimeout(getConnectTimeout());
+    req.setReadTimeout(getReadTimeout());
     request(req, noAuth, callback);
   }
 
@@ -124,13 +138,20 @@ class HTTPClient {
   virtual void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) = 0;
   virtual void clearCookies() = 0;
 
+  void setConnectTimeout(int t) { connect_timeout = t; }
+  void setReadTimeout(int t) { read_timeout = t; }
+  
+  int getConnectTimeout() const { return connect_timeout; }
+  int getReadTimeout() const { return read_timeout; }
+  
   Authorization noAuth;
 
  protected:
   std::string user_agent;
   std::string cookie_jar;
   bool enable_cookies, enable_keepalive;
-  std::map<std::string, std::string> default_headers; 
+  std::map<std::string, std::string> default_headers;
+  int connect_timeout = 0, read_timeout = 0;
 };
 
 class HTTPClientFactory {
