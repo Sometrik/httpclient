@@ -97,8 +97,8 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
+    // curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
     
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &callback);
