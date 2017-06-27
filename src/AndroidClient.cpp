@@ -173,6 +173,7 @@ public:
         env->ExceptionClear();
         __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting input stream");
         input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
+      }
 	if (env->ExceptionCheck()) {
 	  env->ExceptionClear();
         __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting error stream");
@@ -198,6 +199,8 @@ public:
 	    callback.handleRedirectUrl(header);
 	  }
 	  
+	  env->ReleaseStringUTFChars(jheaderKey, headerKey);
+          env->ReleaseStringUTFChars(jheader, header);
 	  env->DeleteLocalRef(jheaderKey);
 	  env->DeleteLocalRef(jheader);
 	}
