@@ -22,6 +22,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
   frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
   outputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/OutputStream"));
 
+  setReadTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setReadTimeout", "(I)V");
   getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
   getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
   getHeaderKeyMethod = myEnv->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
@@ -91,6 +92,7 @@ public:
 
     jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
     env->CallVoidMethod(connection, cache->setUseCachesMethod, JNI_FALSE);
+    env->CallVoidMethod(connection, cache->setReadTimeoutMethod, req.getReadTimeout() * 1000);
     env->DeleteLocalRef(url);
 
     //Authorization example
