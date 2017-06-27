@@ -106,7 +106,6 @@ public:
     combined_headers["User-Agent"] = user_agent;
     if (req.getType() == HTTPRequest::POST && !req.getContentType().empty()) {
       combined_headers["Content-Type"] = req.getContentType();
-//      combined_headers["Content-Length"] = req.getContent().size();
     }
     for (auto & hd : req.getHeaders()) {
       combined_headers[hd.first] = hd.second;
@@ -128,92 +127,106 @@ public:
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
     env->DeleteLocalRef(jTypeString);
 
+    bool connection_failed = false;
+    
     if (req.getType() == HTTPRequest::POST) {
       env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, req.getContent().size());
       jobject outputStream = env->CallObjectMethod(connection, cache->getOutputStreamMethod);
+      if (env->ExceptionCheck()) {
+	__android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
+	env->ExceptionClear();
+	connection_failed = true;
+      }
 
-      for (int i = 0; i < req.getContent().size(); i += 4096) {
-
-        if (env->ExceptionCheck()) {
-          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
-          env->ExceptionClear();
-          break;
-        }
-
+      for (int i = 0; i < req.getContent().size() && !connection_failed; i += 4096) {
         auto a = convertToByteArray(env, req.getContent().substr(i, 4096));
         env->CallVoidMethod(outputStream, cache->outputStreamWriteMethod, a);
-        env->DeleteLocalRef(a);
+	
+	if (env->ExceptionCheck()) {
+          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
+	  env->ExceptionClear();
+	  connection_failed = true;
+        }
+
+	env->DeleteLocalRef(a);
       }
     }
 
-    int responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
+    int responseCode = 0;
+    if (!connection_failed) {
+      responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
+      if (env->ExceptionCheck()) {
+	env->ExceptionClear();
+	__android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "EXCEPTION http request failed");
+	connection_failed = true;
+      }
+    }
 
-    jobject input = 0;
-
-    if (env->ExceptionCheck()) {
-      env->ExceptionClear();
-      __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "EXCEPTION http request failed");
+    if (connection_failed) {
       callback.handleResultCode(500);
-
     } else {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
-
-      input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
       callback.handleResultCode(responseCode);
 
+      jobject input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
       if (env->ExceptionCheck()) {
         env->ExceptionClear();
-        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting stream");
+        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting input stream");
         input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
-      }
-    }
-    if (input != 0) {
-      // Gather headers and values
-      for (int i = 0;; i++) {
-        jstring jheaderKey = (jstring) env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
-        if (jheaderKey == NULL) {
-          break;
-        }
-        const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
-
-        jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
-        const char * header = env->GetStringUTFChars(jheader, 0);
-        // __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
-
-        callback.handleHeader(headerKey, header);
-
-        if (strcasecmp(headerKey, "Location") == 0) {
-          callback.handleRedirectUrl(header);
-        }
-
-        env->DeleteLocalRef(jheaderKey);
-        env->DeleteLocalRef(jheader);
+	if (env->ExceptionCheck()) {
+	  env->ExceptionClear();
+        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting error stream");
+	input = 0;
       }
 
-      // Gather content
-      jbyteArray array = env->NewByteArray(4096);
-      int g = 0;
-      while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
+      if (input != 0) {
+	// Gather headers and values
+	for (int i = 0;; i++) {
+	  jstring jheaderKey = (jstring) env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
+	  if (jheaderKey == NULL) {
+	    break;
+	  }
+	  const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
 
-        if (env->ExceptionCheck()) {
-          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
-          env->ExceptionClear();
-          break;
-        }
-        jbyte* content_array = env->GetByteArrayElements(array, NULL);
-        bool r = callback.handleChunk(g, (char*) content_array);
-        env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-	if (!r) {
-	  break;
+	  jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
+	  const char * header = env->GetStringUTFChars(jheader, 0);
+	  // __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
+	  
+	  callback.handleHeader(headerKey, header);
+	  
+	  if (strcasecmp(headerKey, "Location") == 0) {
+	    callback.handleRedirectUrl(header);
+	  }
+	  
+	  env->DeleteLocalRef(jheaderKey);
+	  env->DeleteLocalRef(jheader);
 	}
+	
+	// Gather content
+	jbyteArray array = env->NewByteArray(4096);
+	int g = 0;
+	while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
+
+	  if (env->ExceptionCheck()) {
+	    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
+	    env->ExceptionClear();
+	    break;
+	  }
+	  jbyte* content_array = env->GetByteArrayElements(array, NULL);
+	  bool r = callback.handleChunk(g, (char*) content_array);
+	  env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
+	  if (!r) {
+	    break;
+	  }
+	}
+	env->DeleteLocalRef(array);
+	env->DeleteLocalRef(input);
       }
-      env->DeleteLocalRef(array);
-
-      callback.handleDisconnect();
-
+      
       env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
-      env->DeleteLocalRef(input);
     }
+    callback.handleDisconnect();
+
     env->DeleteLocalRef(connection);
     cache->getJavaVM()->DetachCurrentThread();
     stored_env = 0;
