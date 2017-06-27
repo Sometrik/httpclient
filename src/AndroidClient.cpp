@@ -176,6 +176,11 @@ public:
         __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting input stream");
         input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
       }
+	if (env->ExceptionCheck()) {
+	  env->ExceptionClear();
+        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting error stream");
+	input = 0;
+      }
 
       if (input != 0) {
 	// Gather headers and values
