@@ -14,6 +14,13 @@ using namespace std;
 
 static bool is_initialized = false;
 
+class CurlClient;
+
+struct curl_context_s {
+  CurlClient * client;
+  HTTPClientInterface * client_interface;
+};
+
 class CurlClient : public HTTPClient {
  public:
   CurlClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true)
@@ -98,16 +105,14 @@ class CurlClient : public HTTPClient {
 
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
     // curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
-    
+
+    // curl_context_s context = { this, callback };
+      
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &callback);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &callback);
 
-    CURLcode res = curl_easy_perform(curl);
-    // if (res != 0) {
-    //   response.setResultCode(500);
-    //   response.setErrorText(curl_easy_strerror(res));
-    // }
+    curl_easy_perform(curl);
     
     callback.handleDisconnect();
     
@@ -233,7 +238,7 @@ int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
   HTTPClientInterface * callback = (HTTPClientInterface *)(clientp);
   assert(callback);
-  return callback->onIdle(true) ? 0 : 1;
+  return callback->onIdle() ? 0 : 1;
 }
 
 #ifndef __APPLE__
