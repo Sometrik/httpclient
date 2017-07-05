@@ -6,13 +6,13 @@
 
 class HTTPClientInterface {
  public:
-  virtual ~HTTPClientInterface() { }
+  virtual ~HTTPClientInterface() = default;
   virtual void handleResultCode(int code) { }
   virtual bool handleRedirectUrl(const std::string & url) { return true; }
   virtual void handleHeader(const std::string & key, const std::string & value) { }
   virtual bool handleChunk(size_t len, const char * chunk) = 0;
   virtual void handleDisconnect() { }
-  virtual bool onIdle(bool is_delayed) { return true; }
+  virtual bool onIdle() { return true; }
 };
 
 #endif
