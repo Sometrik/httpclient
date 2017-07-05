@@ -4,7 +4,6 @@
 #include "SHA1.h"
 #include "URI.h"
 
-#include <iostream>
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
@@ -64,23 +63,17 @@ OAuth::initialize() {
     parameters += URI::urlencode(it->second);        
   }
 
-  // cerr << "parameters = " << parameters << endl;
-
   string data2;
   data2 += http_method;
   data2 += '&';
   data2 += URI::urlencode(base_url);
   data2 += '&';
   data2 += URI::urlencode(parameters);
-
-  cerr << "data2 = " << data2 << endl;
   
   string key;
   key += URI::urlencode(oauth_consumer_secret);
   key += '&';
   key += URI::urlencode(oauth_secret);
-
-  // cerr << "key = " << key << endl;
   
   sha1_context ctx;
   sha1_hmac_starts( &ctx, (const unsigned char *)key.data(), key.size());
@@ -89,6 +82,4 @@ OAuth::initialize() {
   sha1_hmac_finish( &ctx, sha1sum );
   
   oauth_signature = Base64::encode(sha1sum, 20, 0, 0);
-
-  // cerr << "signature = " << oauth_signature << endl;
 }
