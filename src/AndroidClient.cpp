@@ -165,7 +165,7 @@ public:
     }
 
     if (connection_failed) {
-      callback.handleResultCode(500);
+      callback.handleResultCode(0);
     } else {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
       callback.handleResultCode(responseCode);
