@@ -17,8 +17,9 @@ static bool is_initialized = false;
 class CurlClient;
 
 struct curl_context_s {
-  CurlClient * client;
-  HTTPClientInterface * client_interface;
+  time_t prev_data_time;
+  int read_timeout;
+  HTTPClientInterface * callback;
 };
 
 class CurlClient : public HTTPClient {
@@ -104,13 +105,12 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
-    // curl_easy_setopt(curl, CURLOPT_TIMEOUT, req.getTimeout());
 
-    // curl_context_s context = { this, callback };
+    curl_context_s context = { time(0), req.getReadTimeout(), &callback };
       
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &callback);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &callback);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &context);
 
     curl_easy_perform(curl);
     
@@ -189,19 +189,27 @@ size_t
 CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * userp) {
   size_t s = size * nmemb;
   // Content-Type: multipart/x-mixed-replace; boundary=myboundary
-					     
-  HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
+
+  curl_context_s * context = (curl_context_s *)userp;
+  assert(context);
+  context->prev_data_time = time(0);
+  
+  HTTPClientInterface * callback = context->callback;
   assert(callback);
   return callback->handleChunk(s, (const char *)buffer) ? s : 0;  
 }
 
 size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
-  HTTPClientInterface * callback = (HTTPClientInterface *)(userp);
+  curl_context_s * context = (curl_context_s *)userp;
+  assert(context);
+  context->prev_data_time = time(0);
   
   size_t s = size * nmemb;
   bool keep_running = true;
   if (buffer) {
+    HTTPClientInterface * callback = context->callback;
+
     string input((const char*)buffer, s);
 
     if (input.compare(0, 5, "HTTP/") == 0) {
@@ -236,9 +244,14 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
 
 int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-  HTTPClientInterface * callback = (HTTPClientInterface *)(clientp);
-  assert(callback);
-  return callback->onIdle() ? 0 : 1;
+  curl_context_s * context = (curl_context_s *)clientp;
+  if (context->read_timeout && context->prev_data_time + context->read_timeout < time(0)) {
+    return 1;
+  } else {
+    HTTPClientInterface * callback = context->callback;
+    assert(callback);
+    return callback->onIdle() ? 0 : 1;
+  }
 }
 
 #ifndef __APPLE__
