@@ -18,6 +18,7 @@ class CurlClient;
 
 struct curl_context_s {
   time_t prev_data_time;
+  time_t prev_idle_time;
   int read_timeout;
   HTTPClientInterface * callback;
 };
@@ -106,7 +107,7 @@ class CurlClient : public HTTPClient {
 
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
 
-    curl_context_s context = { time(0), req.getReadTimeout(), &callback };
+    curl_context_s context = { time(0), 0, req.getReadTimeout(), &callback };
       
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
@@ -244,13 +245,17 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
 
 int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+  time_t current_time = time(0);
   curl_context_s * context = (curl_context_s *)clientp;
-  if (context->read_timeout && context->prev_data_time + context->read_timeout < time(0)) {
+  if (context->read_timeout && context->prev_data_time + context->read_timeout < current_time) {
     return 1;
-  } else {
+  } else if (context->prev_idle_time != current_time) {
+    context->prev_idle_time = current_time;
     HTTPClientInterface * callback = context->callback;
     assert(callback);
     return callback->onIdle() ? 0 : 1;
+  } else {
+    return 0;
   }
 }
 
