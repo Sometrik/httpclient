@@ -47,6 +47,7 @@ class AndroidClientCache {
   jclass frameworkClass;
   jclass outputStreamClass;
   jmethodID urlConstructor;
+  jmethodID setConnectTimeoutMethod;
   jmethodID openConnectionMethod;
   jmethodID getOutputStreamMethod;
   jmethodID outputStreamWriteMethod;
