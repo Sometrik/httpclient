@@ -1,7 +1,8 @@
 #ifndef _BASICAUTH_H_
 #define _BASICAUTH_H_
 
-#include "Base64.h"
+#include <Authorization.h>
+#include <Base64.h>
 
 class BasicAuth : public Authorization {
  public:
