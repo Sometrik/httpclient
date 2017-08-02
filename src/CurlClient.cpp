@@ -247,7 +247,9 @@ int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
   time_t current_time = time(0);
   curl_context_s * context = (curl_context_s *)clientp;
-  if (context->read_timeout && context->prev_data_time + context->read_timeout < current_time) {
+  if (!context) {
+    return 0;
+  } else if (context->read_timeout && context->prev_data_time + context->read_timeout < current_time) {
     return 1;
   } else if (context->prev_idle_time != current_time) {
     context->prev_idle_time = current_time;
