@@ -12,29 +12,10 @@ class AndroidClientCache {
   AndroidClientCache(JNIEnv * _env);
   ~AndroidClientCache();
 
-  JNIEnv * createJNIEnv() {
-    JNIEnv * env = 0;
-//    javaVM->GetEnv((void**)&Myenv, JNI_VERSION_1_6);
-
-    JavaVMAttachArgs args;
-    args.version = JNI_VERSION_1_6; // choose your JNI version
-    args.name = NULL; // you might want to give the java thread a name
-    args.group = NULL; // you might want to assign the java thread to a ThreadGroup
-    javaVM->AttachCurrentThread(&env, &args);
-    javaVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-    return env;
+  JNIEnv * getEnv() {
+    javaVM->GetEnv((void**)&myEnv, JNI_VERSION_1_6);
+    return myEnv;
   }
-
-  void checkDetaching(JNIEnv * env){
-    if (javaVM->GetEnv((void**) &env, JNI_VERSION_1_2) == JNI_EDETACHED) {
-      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "JavaVM was detached");
-    } else {
-      __android_log_print(ANDROID_LOG_VERBOSE, "Sometrik", "JavaVM was attached. Detaching");
-      javaVM->DetachCurrentThread();
-    }
-  }
-
-  JavaVM * getJavaVM(){ return javaVM; }
 
   jclass cookieManagerClass;
   jmethodID clearCookiesMethod;
@@ -47,7 +28,6 @@ class AndroidClientCache {
   jclass frameworkClass;
   jclass outputStreamClass;
   jmethodID urlConstructor;
-  jmethodID setConnectTimeoutMethod;
   jmethodID openConnectionMethod;
   jmethodID getOutputStreamMethod;
   jmethodID outputStreamWriteMethod;

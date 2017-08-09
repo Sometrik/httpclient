@@ -22,7 +22,6 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
   frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
   outputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/OutputStream"));
 
-  setConnectTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setConnectTimeout", "(I)V");
   setReadTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setReadTimeout", "(I)V");
   getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
   getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
@@ -52,39 +51,31 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
 
 AndroidClientCache::~AndroidClientCache() {
   __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClien", "destructor on clientCache");
-  myEnv->DeleteGlobalRef(cookieManagerClass);
-  myEnv->DeleteGlobalRef(httpClass);
-  myEnv->DeleteGlobalRef(urlClass);
-  myEnv->DeleteGlobalRef(inputStreamClass);
-  myEnv->DeleteGlobalRef(frameworkClass);
-  myEnv->DeleteGlobalRef(outputStreamClass);
+  JNIEnv * env = getEnv();
+  env->DeleteGlobalRef(cookieManagerClass);
+  env->DeleteGlobalRef(httpClass);
+  env->DeleteGlobalRef(urlClass);
+  env->DeleteGlobalRef(inputStreamClass);
+  env->DeleteGlobalRef(frameworkClass);
+  env->DeleteGlobalRef(outputStreamClass);
 }
 
 class AndroidClient : public HTTPClient {
 public:
   AndroidClient(const std::shared_ptr<AndroidClientCache> & _cache, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
+
+    __android_log_print(ANDROID_LOG_INFO, "Sometrik", "New AndroidClient");
   }
 
 
 
-  ~AndroidClient(){
-   if (stored_env) {
-       cache->getJavaVM()->DetachCurrentThread();
-   }
-  }
+  ~AndroidClient() {
 
-  JNIEnv * getEnv() {
-    if (stored_env) return stored_env;
-    else {
-      stored_env = cache->createJNIEnv();
-      // cache->checkEnvAttachment(&env);
-      return stored_env;
-    }
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
-    JNIEnv * env = getEnv();
+    JNIEnv * env = cache->getEnv();
 
     __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
     jstring juri = env->NewStringUTF(req.getURI().c_str());
@@ -94,7 +85,7 @@ public:
     jobject connection = env->CallObjectMethod(url, cache->openConnectionMethod);
     env->CallVoidMethod(connection, cache->setUseCachesMethod, JNI_FALSE);
     env->CallVoidMethod(connection, cache->setReadTimeoutMethod, req.getReadTimeout() * 1000);
-    env->CallVoidMethod(connection, cache->setConnectTimeoutMethod, req.getConnectTimeout() * 1000);
+//    env->CallVoidMethod(connection, cache->setConnectTimeoutMethod, req.getConnectTimeout() * 1000);
     env->DeleteLocalRef(url);
 
     //Authorization example
@@ -226,6 +217,7 @@ public:
 	  if (!r) {
 	    break;
 	  }
+	  callback.onIdle();
 	}
 	env->DeleteLocalRef(array);
 	env->DeleteLocalRef(input);
@@ -236,8 +228,6 @@ public:
     callback.handleDisconnect();
 
     env->DeleteLocalRef(connection);
-    cache->getJavaVM()->DetachCurrentThread();
-    stored_env = 0;
 }
 
 
@@ -248,7 +238,6 @@ public:
 
 private:
   std::shared_ptr<AndroidClientCache> cache;
-  JNIEnv * stored_env = 0;
 };
 
 std::unique_ptr<HTTPClient>
