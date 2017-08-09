@@ -50,7 +50,7 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
 }
 
 AndroidClientCache::~AndroidClientCache() {
-  __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClien", "destructor on clientCache");
+  __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "destructor on clientCache");
   JNIEnv * env = getEnv();
   env->DeleteGlobalRef(cookieManagerClass);
   env->DeleteGlobalRef(httpClass);
