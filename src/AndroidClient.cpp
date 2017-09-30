@@ -3,8 +3,6 @@
 #include <android/log.h>
 #include <vector>
 
-
-
 static jbyteArray convertToByteArray(JNIEnv * env, const std::string & s) {
   const jbyte * pNativeMessage = reinterpret_cast<const jbyte*>(s.c_str());
   jbyteArray bytes = env->NewByteArray(s.size());
@@ -50,7 +48,6 @@ AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
 }
 
 AndroidClientCache::~AndroidClientCache() {
-  __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "destructor on clientCache");
   JNIEnv * env = getEnv();
   env->DeleteGlobalRef(cookieManagerClass);
   env->DeleteGlobalRef(httpClass);
@@ -64,20 +61,12 @@ class AndroidClient : public HTTPClient {
 public:
   AndroidClient(const std::shared_ptr<AndroidClientCache> & _cache, const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
     : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive), cache(_cache) {
-
-    __android_log_print(ANDROID_LOG_INFO, "Sometrik", "New AndroidClient");
-  }
-
-
-
-  ~AndroidClient() {
-
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
     JNIEnv * env = cache->getEnv();
 
-    __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
+    // __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
     jstring juri = env->NewStringUTF(req.getURI().c_str());
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, juri);
     env->DeleteLocalRef(juri);
@@ -91,7 +80,7 @@ public:
     //Authorization example
 //    env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
     std::string auth_header = auth.createHeader();
-   env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
+    env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
     // Setting headers for request
     std::map<std::string, std::string> combined_headers;
@@ -106,7 +95,7 @@ public:
       combined_headers[hd.first] = hd.second;
     }
     if (!auth_header.empty()) {
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Auth: %s = %s", auth.getHeaderName(), auth_header.c_str());
+      // __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Auth: %s = %s", auth.getHeaderName(), auth_header.c_str());
       combined_headers[auth.getHeaderName()] = auth_header;
     }
     for (auto & hd : combined_headers) {
@@ -128,7 +117,7 @@ public:
       env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, req.getContent().size());
       jobject outputStream = env->CallObjectMethod(connection, cache->getOutputStreamMethod);
       if (env->ExceptionCheck()) {
-	__android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
+	// __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
 	env->ExceptionClear();
 	connection_failed = true;
       }
@@ -138,7 +127,7 @@ public:
         env->CallVoidMethod(outputStream, cache->outputStreamWriteMethod, a);
 	
 	if (env->ExceptionCheck()) {
-          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
+          // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
 	  env->ExceptionClear();
 	  connection_failed = true;
         }
@@ -152,7 +141,7 @@ public:
       responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
       if (env->ExceptionCheck()) {
 	env->ExceptionClear();
-	__android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "EXCEPTION http request failed");
+	// __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "EXCEPTION http request failed");
 	connection_failed = true;
       }
     }
@@ -160,18 +149,18 @@ public:
     if (connection_failed) {
       callback.handleResultCode(0);
     } else {
-      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+      // __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
       callback.handleResultCode(responseCode);
 
       jobject input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
       if (env->ExceptionCheck()) {
         env->ExceptionClear();
-        __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting input stream");
+        // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting input stream");
         input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
 
         if (env->ExceptionCheck()) {
           env->ExceptionClear();
-          __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting error stream");
+          // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting error stream");
           input = 0;
         }
       }
@@ -207,17 +196,16 @@ public:
 	while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
 
 	  if (env->ExceptionCheck()) {
-	    __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
+	    // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
 	    env->ExceptionClear();
 	    break;
 	  }
 	  jbyte* content_array = env->GetByteArrayElements(array, NULL);
 	  bool r = callback.handleChunk(g, (char*) content_array);
 	  env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
-	  if (!r) {
+	  if (!r || !callback.onIdle()) {
 	    break;
 	  }
-	  callback.onIdle();
 	}
 	env->DeleteLocalRef(array);
 	env->DeleteLocalRef(input);
@@ -228,8 +216,7 @@ public:
     callback.handleDisconnect();
 
     env->DeleteLocalRef(connection);
-}
-
+  }
 
   void clearCookies() {
 //    JNIEnv * env = cache->getJNIEnv();
