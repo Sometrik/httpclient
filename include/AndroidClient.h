@@ -56,7 +56,7 @@ class AndroidClientCache {
   jmethodID getHeaderMethod;
   jmethodID getHeaderMethodInt;
   jmethodID getHeaderKeyMethod;
-  jmethodID handleThrowableMethod;
+  // jmethodID handleThrowableMethod;
   jmethodID setUseCachesMethod;
   jmethodID disconnectConnectionMethod;
 
