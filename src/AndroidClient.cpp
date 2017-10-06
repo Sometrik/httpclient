@@ -1,7 +1,10 @@
 #include <AndroidClient.h>
-#include <jni.h>
+
 #include <android/log.h>
 #include <vector>
+#include <memory>
+
+using namespace std;
 
 static jbyteArray convertToByteArray(JNIEnv * env, const std::string & s) {
   const jbyte * pNativeMessage = reinterpret_cast<const jbyte*>(s.c_str());
@@ -10,52 +13,106 @@ static jbyteArray convertToByteArray(JNIEnv * env, const std::string & s) {
   return bytes;
 }
 
-AndroidClientCache::AndroidClientCache(JNIEnv * _env) : myEnv(_env) {
-  myEnv->GetJavaVM(&javaVM);
-  cookieManagerClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("android/webkit/CookieManager"));
-  httpClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/HttpURLConnection"));
-  urlClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URL"));
-  urlConnectionClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URLConnection"));
-  inputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/InputStream"));
-  frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
-  outputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/OutputStream"));
+class AndroidClientCache {
+ public:
+  AndroidClientCache(JNIEnv * myEnv) {
+    myEnv->GetJavaVM(&javaVM);
+    cookieManagerClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("android/webkit/CookieManager"));
+    httpClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/HttpURLConnection"));
+    urlClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URL"));
+    urlConnectionClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URLConnection"));
+    inputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/InputStream"));
+    frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
+    outputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/OutputStream"));
+    setReadTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setReadTimeout", "(I)V");
+    getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
+    getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
+    getHeaderKeyMethod = myEnv->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
+    readMethod = myEnv->GetMethodID(inputStreamClass, "read", "([B)I");
+    urlConstructor = myEnv->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
+    openConnectionMethod = myEnv->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
+    setUseCachesMethod = myEnv->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
+    disconnectConnectionMethod = myEnv->GetMethodID(httpClass, "disconnect", "()V");
+    getOutputStreamMethod = myEnv->GetMethodID(urlConnectionClass, "getOutputStream", "()Ljava/io/OutputStream;");
+    outputStreamWriteMethod = myEnv->GetMethodID(outputStreamClass, "write", "([B)V");
+    setChunkedStreamingModeMethod = myEnv->GetMethodID(httpClass, "setChunkedStreamingMode", "(I)V");
+    setFixedLengthStreamingModeMethod = myEnv->GetMethodID(httpClass, "setFixedLengthStreamingMode", "(I)V");
+    setRequestProperty = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+    setRequestMethod = myEnv->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
+    setFollowMethod = myEnv->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
+    setDoInputMethod = myEnv->GetMethodID(httpClass, "setDoInput", "(Z)V");
+    setDoOutputMethod = myEnv->GetMethodID(httpClass, "setDoOutput", "(Z)V");
+    getResponseCodeMethod = myEnv->GetMethodID(httpClass, "getResponseCode", "()I");
+    getResponseMessageMethod = myEnv->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
+    setRequestPropertyMethod = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
+    clearCookiesMethod = myEnv->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
+    getInputStreamMethod = myEnv->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
+    getErrorStreamMethod = myEnv->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
+    // handleThrowableMethod = myEnv->GetStaticMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
+  }
 
-  setReadTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setReadTimeout", "(I)V");
-  getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
-  getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
-  getHeaderKeyMethod = myEnv->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
-  readMethod = myEnv->GetMethodID(inputStreamClass, "read", "([B)I");
-  urlConstructor = myEnv->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
-  openConnectionMethod = myEnv->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
-  setUseCachesMethod = myEnv->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
-  disconnectConnectionMethod = myEnv->GetMethodID(httpClass, "disconnect", "()V");
-  getOutputStreamMethod = myEnv->GetMethodID(urlConnectionClass, "getOutputStream", "()Ljava/io/OutputStream;");
-  outputStreamWriteMethod = myEnv->GetMethodID(outputStreamClass, "write", "([B)V");
-  setChunkedStreamingModeMethod = myEnv->GetMethodID(httpClass, "setChunkedStreamingMode", "(I)V");
-  setFixedLengthStreamingModeMethod = myEnv->GetMethodID(httpClass, "setFixedLengthStreamingMode", "(I)V");
-  setRequestProperty = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-  setRequestMethod = myEnv->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
-  setFollowMethod = myEnv->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
-  setDoInputMethod = myEnv->GetMethodID(httpClass, "setDoInput", "(Z)V");
-  setDoOutputMethod = myEnv->GetMethodID(httpClass, "setDoOutput", "(Z)V");
-  getResponseCodeMethod = myEnv->GetMethodID(httpClass, "getResponseCode", "()I");
-  getResponseMessageMethod = myEnv->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
-  setRequestPropertyMethod = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-  clearCookiesMethod = myEnv->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
-  getInputStreamMethod = myEnv->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
-  getErrorStreamMethod = myEnv->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
-  // handleThrowableMethod = myEnv->GetStaticMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
-}
+  ~AndroidClientCache() {
+    JNIEnv * env = getEnv();
+    env->DeleteGlobalRef(cookieManagerClass);
+    env->DeleteGlobalRef(httpClass);
+    env->DeleteGlobalRef(urlClass);
+    env->DeleteGlobalRef(inputStreamClass);
+    env->DeleteGlobalRef(frameworkClass);
+    env->DeleteGlobalRef(outputStreamClass);
+  }
 
-AndroidClientCache::~AndroidClientCache() {
-  JNIEnv * env = getEnv();
-  env->DeleteGlobalRef(cookieManagerClass);
-  env->DeleteGlobalRef(httpClass);
-  env->DeleteGlobalRef(urlClass);
-  env->DeleteGlobalRef(inputStreamClass);
-  env->DeleteGlobalRef(frameworkClass);
-  env->DeleteGlobalRef(outputStreamClass);
-}
+  JNIEnv * getEnv() {
+    JNIEnv * env = 0;
+    javaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    return env;
+  }
+
+  jclass cookieManagerClass;
+  jmethodID clearCookiesMethod;
+  jclass httpClass;
+  jclass urlClass;
+  jclass urlConnectionClass;
+  jclass bufferedReaderClass;
+  jclass inputStreamReaderClass;
+  jclass inputStreamClass;
+  jclass frameworkClass;
+  jclass outputStreamClass;
+  jmethodID urlConstructor;
+  jmethodID openConnectionMethod;
+  jmethodID getOutputStreamMethod;
+  jmethodID outputStreamWriteMethod;
+  jmethodID setReadTimeoutMethod;
+  jmethodID setChunkedStreamingModeMethod;
+  jmethodID setFixedLengthStreamingModeMethod;
+  jmethodID setRequestProperty;
+  jmethodID setRequestMethod;
+  jmethodID setDoInputMethod;
+  jmethodID setDoOutputMethod;
+  jmethodID getResponseCodeMethod;
+  jmethodID getResponseMessageMethod;
+  jmethodID setRequestPropertyMethod;
+  jmethodID outputStreamConstructor;
+  jmethodID factoryDecodeMethod;
+  jmethodID getInputStreamMethod;
+  jmethodID getErrorStreamMethod;
+  jmethodID bufferedReaderConstructor;
+  jmethodID inputStreamReaderConstructor;
+  jmethodID readLineMethod;
+  jmethodID readerCloseMethod;
+  jmethodID readMethod;
+  jmethodID inputStreamCloseMethod;
+  jmethodID setFollowMethod;
+  jmethodID getHeaderMethod;
+  jmethodID getHeaderMethodInt;
+  jmethodID getHeaderKeyMethod;
+  // jmethodID handleThrowableMethod;
+  jmethodID setUseCachesMethod;
+  jmethodID disconnectConnectionMethod;
+
+ private:
+  JavaVM * javaVM;
+  JNIEnv * myEnv;
+};
 
 class AndroidClient : public HTTPClient {
 public:
@@ -226,6 +283,13 @@ public:
 private:
   std::shared_ptr<AndroidClientCache> cache;
 };
+
+std::shared_ptr<AndroidClientCache> AndroidClientFactory::cache;
+
+void
+AndroidClientFactory::initialize(JNIEnv * env) {
+  cache = make_shared<AndroidClientCache>(env);
+}
 
 std::unique_ptr<HTTPClient>
 AndroidClientFactory::createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
