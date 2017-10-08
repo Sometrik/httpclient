@@ -38,6 +38,8 @@ class URI {
   std::map<std::string, std::string> parseQueryString(const char separator = '&') const { return parseQueryString(query, separator); }
 
   std::string toString() const;
+  std::string getDisplayUrl() const { return domain + path; }
+  
   void setQueryString(const std::map<std::string, std::string> & pairs, const std::list<std::string> & singletons);
   void setQueryString(const std::map<std::string, std::string> & pairs);
 
