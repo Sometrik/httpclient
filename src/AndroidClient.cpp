@@ -13,6 +13,25 @@ static jbyteArray convertToByteArray(JNIEnv * env, const std::string & s) {
   return bytes;
 }
 
+static void logException(JNIEnv * env, const char * error) {
+  jthrowable e = env->ExceptionOccurred();
+  env->ExceptionClear();
+  jclass clazz = env->GetObjectClass(e);
+  jmethodID getMessage = env->GetMethodID(clazz, "getMessage", "()Ljava/lang/String;");
+  jstring message = (jstring)env->CallObjectMethod(e, getMessage);
+  string m;
+  if (message != NULL) {
+    const char *mstr = env->GetStringUTFChars(message, NULL);
+    m = mstr;
+    env->ReleaseStringUTFChars(message, mstr);
+  }
+  env->DeleteLocalRef(message);
+  env->DeleteLocalRef(clazz);
+  env->DeleteLocalRef(e);
+
+  __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "%s: %s", error, m.c_str());
+}
+
 class AndroidClientCache {
  public:
   AndroidClientCache(JNIEnv * myEnv) {
@@ -174,8 +193,7 @@ public:
       env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, req.getContent().size());
       jobject outputStream = env->CallObjectMethod(connection, cache->getOutputStreamMethod);
       if (env->ExceptionCheck()) {
-	// __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
-	env->ExceptionClear();
+        logException(env, "Failed to open output stream");
 	connection_failed = true;
       }
 
@@ -184,8 +202,7 @@ public:
         env->CallVoidMethod(outputStream, cache->outputStreamWriteMethod, a);
 	
 	if (env->ExceptionCheck()) {
-          // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while posting content");
-	  env->ExceptionClear();
+	  logException(env, "Failed to write post data");
 	  connection_failed = true;
         }
 
@@ -197,8 +214,7 @@ public:
     if (!connection_failed) {
       responseCode = env->CallIntMethod(connection, cache->getResponseCodeMethod);
       if (env->ExceptionCheck()) {
-	env->ExceptionClear();
-	// __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "EXCEPTION http request failed");
+        logException(env, "Failed to get response code");
 	connection_failed = true;
       }
     }
@@ -211,13 +227,12 @@ public:
 
       jobject input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
       if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting input stream");
+        logException(env, "Failed to open input stream");
+
         input = env->CallObjectMethod(connection, cache->getErrorStreamMethod);
 
         if (env->ExceptionCheck()) {
-          env->ExceptionClear();
-          // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while getting error stream");
+          logException(env, "Failed to open error stream");
           input = 0;
         }
       }
@@ -226,35 +241,31 @@ public:
 	// Gather headers and values
 	for (int i = 0;; i++) {
 	  jstring jheaderKey = (jstring) env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
-	  if (jheaderKey == NULL) {
-	    break;
+	  if (jheaderKey != NULL) {
+	    jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
+	    if (jheader != NULL) {
+	      const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
+	      const char * header = env->GetStringUTFChars(jheader, 0);
+	      callback.handleHeader(headerKey, header);
+	  
+	      if (strcasecmp(headerKey, "Location") == 0) {
+	        callback.handleRedirectUrl(header);
+	      }
+	  
+	      env->ReleaseStringUTFChars(jheaderKey, headerKey);
+              env->ReleaseStringUTFChars(jheader, header);
+	    }
+	    env->DeleteLocalRef(jheader);
 	  }
-	  const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
-
-	  jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
-	  const char * header = env->GetStringUTFChars(jheader, 0);
-	  // __android_log_print(ANDROID_LOG_INFO, "content", "header: %s = %s", headerKey, header);
-	  
-	  callback.handleHeader(headerKey, header);
-	  
-	  if (strcasecmp(headerKey, "Location") == 0) {
-	    callback.handleRedirectUrl(header);
-	  }
-	  
-	  env->ReleaseStringUTFChars(jheaderKey, headerKey);
-          env->ReleaseStringUTFChars(jheader, header);
 	  env->DeleteLocalRef(jheaderKey);
-	  env->DeleteLocalRef(jheader);
 	}
 	
 	// Gather content
 	jbyteArray array = env->NewByteArray(4096);
 	int g = 0;
 	while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
-
 	  if (env->ExceptionCheck()) {
-	    // __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "Exception while reading content");
-	    env->ExceptionClear();
+	    logException(env, "Failed to read stream");
 	    break;
 	  }
 	  jbyte* content_array = env->GetByteArrayElements(array, NULL);
