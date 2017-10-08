@@ -29,7 +29,7 @@ static void logException(JNIEnv * env, const char * error) {
   env->DeleteLocalRef(clazz);
   env->DeleteLocalRef(e);
 
-  __android_log_print(ANDROID_LOG_VERBOSE, "AndroidClient", "%s: %s", error, m.c_str());
+  __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "%s: %s", error, m.c_str());
 }
 
 class AndroidClientCache {
@@ -142,7 +142,8 @@ public:
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
     JNIEnv * env = cache->getEnv();
 
-    // __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
+    __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
+
     jstring juri = env->NewStringUTF(req.getURI().c_str());
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, juri);
     env->DeleteLocalRef(juri);
@@ -241,7 +242,9 @@ public:
 	// Gather headers and values
 	for (int i = 0;; i++) {
 	  jstring jheaderKey = (jstring) env->CallObjectMethod(connection, cache->getHeaderKeyMethod, i);
-	  if (jheaderKey != NULL) {
+	  if (jheaderKey == NULL) {
+	    break;
+	  } else {
 	    jstring jheader = (jstring) env->CallObjectMethod(connection, cache->getHeaderMethodInt, i);
 	    if (jheader != NULL) {
 	      const char * headerKey = env->GetStringUTFChars(jheaderKey, 0);
@@ -254,10 +257,10 @@ public:
 	  
 	      env->ReleaseStringUTFChars(jheaderKey, headerKey);
               env->ReleaseStringUTFChars(jheader, header);
-	    }
-	    env->DeleteLocalRef(jheader);
+              env->DeleteLocalRef(jheader);
+            }
+	    env->DeleteLocalRef(jheaderKey);
 	  }
-	  env->DeleteLocalRef(jheaderKey);
 	}
 	
 	// Gather content
