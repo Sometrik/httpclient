@@ -17,7 +17,7 @@ static void logException(JNIEnv * env, const char * error) {
   jthrowable e = env->ExceptionOccurred();
   env->ExceptionClear();
   jclass clazz = env->GetObjectClass(e);
-  jmethodID getMessage = env->GetMethodID(clazz, "getMessage", "()Ljava/lang/String;");
+  jmethodID getMessage = env->GetMethodID(clazz, "toString", "()Ljava/lang/String;"); // or getMessage
   jstring message = (jstring)env->CallObjectMethod(e, getMessage);
   string m;
   if (message != NULL) {
@@ -144,7 +144,7 @@ public:
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) {
     JNIEnv * env = cache->getEnv();
 
-    __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
+    // __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "Host = %s, ua = %s", req.getURI().c_str(), user_agent.c_str());
 
     jstring juri = env->NewStringUTF(req.getURI().c_str());
     jobject url = env->NewObject(cache->urlClass, cache->urlConstructor, juri);
@@ -230,7 +230,7 @@ public:
     if (connection_failed) {
       callback.handleResultCode(0);
     } else {
-      // __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
+      __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
       callback.handleResultCode(responseCode);
 
       jobject input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
