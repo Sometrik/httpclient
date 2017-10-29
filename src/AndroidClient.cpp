@@ -36,7 +36,6 @@ class AndroidClientCache {
  public:
   AndroidClientCache(JNIEnv * myEnv) {
     myEnv->GetJavaVM(&javaVM);
-    cookieManagerClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("android/webkit/CookieManager"));
     httpClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/HttpURLConnection"));
     urlClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URL"));
     urlConnectionClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URLConnection"));
@@ -65,15 +64,12 @@ class AndroidClientCache {
     getResponseCodeMethod = myEnv->GetMethodID(httpClass, "getResponseCode", "()I");
     getResponseMessageMethod = myEnv->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
     setRequestPropertyMethod = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
-    clearCookiesMethod = myEnv->GetMethodID(cookieManagerClass, "removeAllCookie", "()V");
     getInputStreamMethod = myEnv->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
     getErrorStreamMethod = myEnv->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
-    // handleThrowableMethod = myEnv->GetStaticMethodID(frameworkClass, "handleNativeException", "(Ljava/lang/Throwable;)V");
   }
 
   ~AndroidClientCache() {
     JNIEnv * env = getEnv();
-    env->DeleteGlobalRef(cookieManagerClass);
     env->DeleteGlobalRef(httpClass);
     env->DeleteGlobalRef(urlClass);
     env->DeleteGlobalRef(inputStreamClass);
@@ -87,8 +83,6 @@ class AndroidClientCache {
     return env;
   }
 
-  jclass cookieManagerClass;
-  jmethodID clearCookiesMethod;
   jclass httpClass;
   jclass urlClass;
   jclass urlConnectionClass;
@@ -126,7 +120,6 @@ class AndroidClientCache {
   jmethodID getHeaderMethod;
   jmethodID getHeaderMethodInt;
   jmethodID getHeaderKeyMethod;
-  // jmethodID handleThrowableMethod;
   jmethodID setUseCachesMethod;
   jmethodID disconnectConnectionMethod;
 
@@ -296,10 +289,7 @@ public:
     env->DeleteLocalRef(connection);
   }
 
-  void clearCookies() {
-//    JNIEnv * env = cache->getJNIEnv();
-//    env->CallVoidMethod(cache->cookieManagerClass, cache->clearCookiesMethod);
-  }
+  void clearCookies() { }
 
 private:
   std::shared_ptr<AndroidClientCache> cache;
