@@ -40,29 +40,29 @@ class AndroidClientCache {
     urlClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URL"));
     urlConnectionClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/net/URLConnection"));
     inputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/InputStream"));
-    frameworkClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("com/sometrik/framework/FrameWork"));
     outputStreamClass = (jclass) myEnv->NewGlobalRef(myEnv->FindClass("java/io/OutputStream"));
     setReadTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setReadTimeout", "(I)V");
     setConnectTimeoutMethod = myEnv->GetMethodID(urlConnectionClass, "setConnectTimeout", "(I)V");
     getHeaderMethod = myEnv->GetMethodID(httpClass, "getHeaderField", "(Ljava/lang/String;)Ljava/lang/String;");
     getHeaderMethodInt = myEnv->GetMethodID(httpClass, "getHeaderField", "(I)Ljava/lang/String;");
     getHeaderKeyMethod = myEnv->GetMethodID(httpClass, "getHeaderFieldKey", "(I)Ljava/lang/String;");
-    readMethod = myEnv->GetMethodID(inputStreamClass, "read", "([B)I");
+    inputStreamReadMethod = myEnv->GetMethodID(inputStreamClass, "read", "([B)I");
+    inputStreamCloseMethod = myEnv->GetMethodID(inputStreamClass, "close", "()V");
     urlConstructor = myEnv->GetMethodID(urlClass, "<init>", "(Ljava/lang/String;)V");
     openConnectionMethod = myEnv->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
     setUseCachesMethod = myEnv->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
     disconnectConnectionMethod = myEnv->GetMethodID(httpClass, "disconnect", "()V");
+    closeConnectionMethod = myEnv->GetMethodID(httpClass, "close", "()V");
     getOutputStreamMethod = myEnv->GetMethodID(urlConnectionClass, "getOutputStream", "()Ljava/io/OutputStream;");
     outputStreamWriteMethod = myEnv->GetMethodID(outputStreamClass, "write", "([B)V");
+    outputStreamCloseMethod = myEnv->GetMethodID(outputStreamClass, "close", "()V");
     setChunkedStreamingModeMethod = myEnv->GetMethodID(httpClass, "setChunkedStreamingMode", "(I)V");
     setFixedLengthStreamingModeMethod = myEnv->GetMethodID(httpClass, "setFixedLengthStreamingMode", "(I)V");
-    setRequestProperty = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
     setRequestMethod = myEnv->GetMethodID(httpClass, "setRequestMethod", "(Ljava/lang/String;)V");
     setFollowMethod = myEnv->GetMethodID(httpClass, "setInstanceFollowRedirects", "(Z)V");
     setDoInputMethod = myEnv->GetMethodID(httpClass, "setDoInput", "(Z)V");
     setDoOutputMethod = myEnv->GetMethodID(httpClass, "setDoOutput", "(Z)V");
     getResponseCodeMethod = myEnv->GetMethodID(httpClass, "getResponseCode", "()I");
-    getResponseMessageMethod = myEnv->GetMethodID(httpClass, "getResponseMessage", "()Ljava/lang/String;");
     setRequestPropertyMethod = myEnv->GetMethodID(httpClass, "setRequestProperty", "(Ljava/lang/String;Ljava/lang/String;)V");
     getInputStreamMethod = myEnv->GetMethodID(httpClass, "getInputStream", "()Ljava/io/InputStream;");
     getErrorStreamMethod = myEnv->GetMethodID(httpClass, "getErrorStream", "()Ljava/io/InputStream;");
@@ -86,35 +86,25 @@ class AndroidClientCache {
   jclass httpClass;
   jclass urlClass;
   jclass urlConnectionClass;
-  jclass bufferedReaderClass;
-  jclass inputStreamReaderClass;
   jclass inputStreamClass;
-  jclass frameworkClass;
   jclass outputStreamClass;
   jmethodID urlConstructor;
   jmethodID openConnectionMethod;
   jmethodID getOutputStreamMethod;
   jmethodID outputStreamWriteMethod;
+  jmethodID outputStreamCloseMethod;
   jmethodID setReadTimeoutMethod;
   jmethodID setConnectTimeoutMethod;
   jmethodID setChunkedStreamingModeMethod;
   jmethodID setFixedLengthStreamingModeMethod;
-  jmethodID setRequestProperty;
   jmethodID setRequestMethod;
   jmethodID setDoInputMethod;
   jmethodID setDoOutputMethod;
   jmethodID getResponseCodeMethod;
-  jmethodID getResponseMessageMethod;
   jmethodID setRequestPropertyMethod;
-  jmethodID outputStreamConstructor;
-  jmethodID factoryDecodeMethod;
   jmethodID getInputStreamMethod;
   jmethodID getErrorStreamMethod;
-  jmethodID bufferedReaderConstructor;
-  jmethodID inputStreamReaderConstructor;
-  jmethodID readLineMethod;
-  jmethodID readerCloseMethod;
-  jmethodID readMethod;
+  jmethodID inputStreamReadMethod;
   jmethodID inputStreamCloseMethod;
   jmethodID setFollowMethod;
   jmethodID getHeaderMethod;
@@ -122,6 +112,7 @@ class AndroidClientCache {
   jmethodID getHeaderKeyMethod;
   jmethodID setUseCachesMethod;
   jmethodID disconnectConnectionMethod;
+  jmethodID closeConnectionMethod;
 
  private:
   JavaVM * javaVM;
@@ -154,8 +145,6 @@ public:
     env->CallVoidMethod(connection, cache->setConnectTimeoutMethod, req.getConnectTimeout() * 1000);
     env->DeleteLocalRef(url);
 
-    //Authorization example
-//    env->CallVoidMethod(connection, setRequestPropertyMethod, env->NewStringUTF("Authorization"), env->NewStringUTF("myUsername"));
     std::string auth_header = auth.createHeader();
     env->CallVoidMethod(connection, cache->setFollowMethod, req.getFollowLocation() ? JNI_TRUE : JNI_FALSE);
 
@@ -209,6 +198,9 @@ public:
 
 	env->DeleteLocalRef(a);
       }
+
+      env->CallVoidMethod(output, cache->outputStreamCloseMethod);
+      env->DeleteLocalRef(output);
     }
 
     int responseCode = 0;
@@ -225,6 +217,8 @@ public:
     } else {
       __android_log_print(ANDROID_LOG_INFO, "AndroidClient", "http request responsecode = %i", responseCode);
       callback.handleResultCode(responseCode);
+
+      bool force_disconnect = false;
 
       jobject input = env->CallObjectMethod(connection, cache->getInputStreamMethod);
       if (env->ExceptionCheck()) {
@@ -266,7 +260,7 @@ public:
 	// Gather content
 	jbyteArray array = env->NewByteArray(4096);
 	int g = 0;
-	while ((g = env->CallIntMethod(input, cache->readMethod, array)) != -1) {
+	while ((g = env->CallIntMethod(input, cache->inputStreamReadMethod, array)) != -1) {
 	  if (env->ExceptionCheck()) {
 	    logException(env, "Failed to read stream");
 	    break;
@@ -275,14 +269,20 @@ public:
 	  bool r = callback.handleChunk(g, (char*) content_array);
 	  env->ReleaseByteArrayElements(array, content_array, JNI_ABORT);
 	  if (!r || !callback.onIdle()) {
+	    force_disconnect = true;
 	    break;
 	  }
 	}
+	env->CallVoidMethod(input, cache->inputStreamCloseMethod);
 	env->DeleteLocalRef(array);
 	env->DeleteLocalRef(input);
       }
-      
-      env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
+
+      if (force_disconnect) { // Terminate connection
+	env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
+      } else { // Allow connection to be reused
+	env->CallVoidMethod(connection, cache->closeConnectionMethod);
+      }
     }
     callback.handleDisconnect();
 
