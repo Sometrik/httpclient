@@ -52,7 +52,6 @@ class AndroidClientCache {
     openConnectionMethod = myEnv->GetMethodID(urlClass, "openConnection", "()Ljava/net/URLConnection;");
     setUseCachesMethod = myEnv->GetMethodID(urlConnectionClass, "setUseCaches", "(Z)V");
     disconnectConnectionMethod = myEnv->GetMethodID(httpClass, "disconnect", "()V");
-    closeConnectionMethod = myEnv->GetMethodID(httpClass, "close", "()V");
     getOutputStreamMethod = myEnv->GetMethodID(urlConnectionClass, "getOutputStream", "()Ljava/io/OutputStream;");
     outputStreamWriteMethod = myEnv->GetMethodID(outputStreamClass, "write", "([B)V");
     outputStreamCloseMethod = myEnv->GetMethodID(outputStreamClass, "close", "()V");
@@ -73,7 +72,6 @@ class AndroidClientCache {
     env->DeleteGlobalRef(httpClass);
     env->DeleteGlobalRef(urlClass);
     env->DeleteGlobalRef(inputStreamClass);
-    env->DeleteGlobalRef(frameworkClass);
     env->DeleteGlobalRef(outputStreamClass);
   }
 
@@ -112,7 +110,6 @@ class AndroidClientCache {
   jmethodID getHeaderKeyMethod;
   jmethodID setUseCachesMethod;
   jmethodID disconnectConnectionMethod;
-  jmethodID closeConnectionMethod;
 
  private:
   JavaVM * javaVM;
@@ -180,27 +177,30 @@ public:
     bool connection_failed = false;
     
     if (req.getType() == HTTPRequest::POST) {
-      env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, req.getContent().size());
+      env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, (int)req.getContent().size());
       jobject outputStream = env->CallObjectMethod(connection, cache->getOutputStreamMethod);
       if (env->ExceptionCheck()) {
         logException(env, "Failed to open output stream");
 	connection_failed = true;
       }
 
-      for (int i = 0; i < req.getContent().size() && !connection_failed; i += 4096) {
-        auto a = convertToByteArray(env, req.getContent().substr(i, 4096));
-        env->CallVoidMethod(outputStream, cache->outputStreamWriteMethod, a);
+      if (!connection_failed) {
+        for (int i = 0; i < req.getContent().size() && !connection_failed; i += 4096) {
+          auto a = convertToByteArray(env, req.getContent().substr(i, 4096));
+          env->CallVoidMethod(outputStream, cache->outputStreamWriteMethod, a);
 	
-	if (env->ExceptionCheck()) {
-	  logException(env, "Failed to write post data");
-	  connection_failed = true;
+          if (env->ExceptionCheck()) {
+            logException(env, "Failed to write post data");
+            connection_failed = true;
+          }
+
+          env->DeleteLocalRef(a);
         }
 
-	env->DeleteLocalRef(a);
+        env->CallVoidMethod(outputStream, cache->outputStreamCloseMethod);
       }
 
-      env->CallVoidMethod(output, cache->outputStreamCloseMethod);
-      env->DeleteLocalRef(output);
+      env->DeleteLocalRef(outputStream);
     }
 
     int responseCode = 0;
@@ -278,10 +278,8 @@ public:
 	env->DeleteLocalRef(input);
       }
 
-      if (force_disconnect) { // Terminate connection
+      if (force_disconnect) { // Terminate connection instead of allowing reuse
 	env->CallVoidMethod(connection, cache->disconnectConnectionMethod);
-      } else { // Allow connection to be reused
-	env->CallVoidMethod(connection, cache->closeConnectionMethod);
       }
     }
     callback.handleDisconnect();
