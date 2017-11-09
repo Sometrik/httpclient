@@ -12,7 +12,7 @@ using namespace std;
 
 string
 OAuth::createHeader() const {
-  std::string = "OAuth ";
+  std::string s = "OAuth ";
   if (!oauth_callback.empty()) s += "oauth_callback=\"" + URI::urlencode(oauth_callback) + "\", ";
   s += "oauth_consumer_key=\"" + URI::urlencode(oauth_consumer_key) + "\", ";
   s += "oauth_nonce=\"" + URI::urlencode(oauth_nonce) + "\", ";
