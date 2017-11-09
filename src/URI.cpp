@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <sstream>
 #include <vector>
-#include <iostream>
 #include <cctype>
 #include <cstdlib>
 #include <cassert>
@@ -176,10 +175,8 @@ URI::parse(const string & value) {
   }
   if (scheme == "http" || scheme == "https") {
     if (s[0] == '/' && s[1] == '/') {
-      cerr << "extraneous doubleslash\n";
       s.erase(0, 2);
     } else if (s[0] == '/') {
-      cerr << "extraneous slash\n";
       s.erase(0, 1);
     }
   }
@@ -383,7 +380,6 @@ URI::getHash() const {
     }
   }
   long long hash = FNV::calcFNV1a_64(s.str());
-  // cerr << "create hash " << hash << " from \"" << s.str() << "\"\n";
   return hash;
 }
 

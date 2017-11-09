@@ -1,7 +1,6 @@
 #include "Base64.h"
 
 #include <cassert>
-#include <iostream>
 
 static char alphabet1[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 static char alphabet2[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -62,7 +61,6 @@ Base64::decode64BitId(const std::string & input) {
   unsigned long long n = 0;
   for (unsigned int i = 0; i < input.size(); i++) {
     int c = base64_decode_digit(input[i]);
-    // cerr << "decoded_digit(" << i << "): " << input[i] << " -> " << c << endl;
     n = 64 * n + c;
   }
     
@@ -75,7 +73,6 @@ Base64::encode64BitId(unsigned long long a) {
   while (a) {
     int b = a & 63;
     a = a >> 6;
-    // cerr << "encoded digit: " << b << " -> " << alphabet2[b] << endl;
     s = alphabet2[b] + s;
   }
   return s;
