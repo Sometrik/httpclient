@@ -4,7 +4,6 @@
 #include "SHA1.h"
 #include "URI.h"
 
-#include <sstream>
 #include <cstdlib>
 #include <ctime>
 #include <map>
@@ -13,17 +12,16 @@ using namespace std;
 
 string
 OAuth::createHeader() const {
-  ostringstream s;
-  s << "OAuth ";  
-  if (!oauth_callback.empty()) s << "oauth_callback=\"" << URI::urlencode(oauth_callback) << "\", ";
-  s << "oauth_consumer_key=\"" << URI::urlencode(oauth_consumer_key) << "\", ";
-  s << "oauth_nonce=\"" << URI::urlencode(oauth_nonce) << "\", ";
-  s << "oauth_signature=\"" << URI::urlencode(oauth_signature) << "\", ";
-  s << "oauth_signature_method=\"HMAC-SHA1\", ";
-  s << "oauth_timestamp=\"" << oauth_timestamp << "\", ";
-  s << "oauth_token=\"" << URI::urlencode(oauth_token) << "\", ";
-  s << "oauth_version=\"1.0\"";
-  return s.str();
+  std::string = "OAuth ";
+  if (!oauth_callback.empty()) s += "oauth_callback=\"" + URI::urlencode(oauth_callback) + "\", ";
+  s += "oauth_consumer_key=\"" + URI::urlencode(oauth_consumer_key) + "\", ";
+  s += "oauth_nonce=\"" + URI::urlencode(oauth_nonce) + "\", ";
+  s += "oauth_signature=\"" + URI::urlencode(oauth_signature) + "\", ";
+  s += "oauth_signature_method=\"HMAC-SHA1\", ";
+  s += "oauth_timestamp=\"" + to_string(oauth_timestamp) + "\", ";
+  s += "oauth_token=\"" + URI::urlencode(oauth_token) + "\", ";
+  s += "oauth_version=\"1.0\"";
+  return s;
 }
 
 void

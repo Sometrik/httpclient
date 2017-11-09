@@ -1,7 +1,6 @@
 #include "URI.h"
 
 #include <cstdio>
-#include <sstream>
 #include <vector>
 #include <cctype>
 #include <cstdlib>
@@ -248,22 +247,22 @@ URI::parse(const string & value) {
   
 string
 URI::toString() const {
-  ostringstream s;
+  string s;
   if (!scheme.empty()) {
-    s << scheme << "://";
+    s += scheme + "://";
   }
-  s << domain;
+  s += domain;
   if (port && port != 80 && port != 443) {
-    s << ":" << port;
+    s += ":" + to_string(port);
   }
-  s << path;
+  s += path;
   if (!query.empty()) {
-    s << "?" << query;
+    s += "?" + query;
   }
   if (!fragment.empty()) {
-    s << "#" << fragment;
+    s += "#" + fragment;
   }
-  return s.str();
+  return s;
 }
 
 void
@@ -356,30 +355,30 @@ long long
 URI::getHash() const {
   // no protocol in hash
   string reduced_domain = getReducedDomain();
-  ostringstream s;
-  s << reduced_domain;
+  string s;
+  s += reduced_domain;
   if (!is_canonical && !fragment.empty() && fragment[0] == '!') {
     // string tmp = fragment;
     // assert(fragment.find_first_of('?') == string::npos);
-    if (fragment[1] != '/') s << '/';
-    s << urldecode(fragment.substr(1));
+    if (fragment[1] != '/') s += '/';
+    s += urldecode(fragment.substr(1));
   } else if (!is_canonical && !fragment.empty() && always_convert_fragment(reduced_domain) && fragment.find_first_of("/") != string::npos) {
     // assert(fragment.find_first_of('?') == string::npos);
-    if (fragment[0] != '/') s << '/';
-    s << urldecode(fragment);
+    if (fragment[0] != '/') s += '/';
+    s += urldecode(fragment);
   } else {
     if (!path.empty()) {
       assert(path[0] == '/');
-      s << urldecode(path);
+      s += urldecode(path);
     }
     if (!query.empty()) {
-      s << "?" << urldecode(query);
+      s += "?" + urldecode(query);
     }
     if (is_canonical && !fragment.empty()) {
-      s << '#' << urldecode(fragment);
+      s += '#' + urldecode(fragment);
     }
   }
-  long long hash = FNV::calcFNV1a_64(s.str());
+  long long hash = FNV::calcFNV1a_64(s);
   return hash;
 }
 
