@@ -7,6 +7,8 @@
 #include <cassert>
 #include <iostream>
 
+#import <Foundation/Foundation.h>
+
 using namespace std;
 
 class iOSClient : public HTTPClient {
@@ -27,7 +29,7 @@ class iOSClient : public HTTPClient {
 
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url_string] 
 				    cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
-				    timeoutInterval:req.getTimeout()
+				    timeoutInterval:req.getConnectTimeout()
 				    ];
     // [url_string release];
     
