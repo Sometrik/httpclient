@@ -33,7 +33,10 @@ class CurlClient : public HTTPClient {
   }
 
   ~CurlClient() {
-    if (curl) curl_easy_cleanup(curl);
+    if (curl) {
+      curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+      curl_easy_cleanup(curl);
+    }
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
