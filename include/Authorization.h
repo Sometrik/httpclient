@@ -9,6 +9,7 @@ class Authorization {
   virtual ~Authorization() = default;
   virtual const char * getHeaderName() const { return "Authorization"; }
   virtual std::string createHeader() const { return ""; }
+  virtual std::string getToken() const { return ""; }
 };
 
 #endif

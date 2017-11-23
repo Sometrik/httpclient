@@ -11,6 +11,7 @@ class OAuth : public Authorization {
     : http_method(_method), base_url(_base_url), content(_content) { }
   
   std::string createHeader() const;
+  std::string getToken() const override { return oauth_token; }
 
   void initialize();
 
