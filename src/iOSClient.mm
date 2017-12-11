@@ -27,6 +27,8 @@ class iOSClient : public HTTPClient {
 
     NSString* url_string = [NSString stringWithUTF8String:req.getURI().c_str()];
 
+    NSLog(@"iOSClient, request: %@", url_string);
+
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url_string] 
 				    cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
 				    timeoutInterval:req.getConnectTimeout()
@@ -104,6 +106,7 @@ class iOSClient : public HTTPClient {
     
     callback.handleResultCode(result_code);
     callback.handleChunk([responseData length], (const char *)[responseData bytes]);
+    callback.handleDisconnect();
 
     // get redirect_url
     // NSDictionary* headers = [(NSHTTPURLResponse *)response allHeaderFields];
@@ -112,6 +115,8 @@ class iOSClient : public HTTPClient {
     // [responseData release];
     // [requestError release];
     // [urlResponse release];
+
+    NSLog(@"iOSClient, request done, result_code = %d", result_code);
   }
 
   void clearCookies() override {
