@@ -128,11 +128,11 @@ class iOSCFClient : public HTTPClient {
       } else if (numBytesRead < 0) {
         CFStreamError error = CFReadStreamGetError(readStream);
         cerr << "got error: " << error.error << endl;
+        terminate = true;
       } else {
         terminate = true;
       }
     }
-    cerr << "connection terminated" << endl;
  
     CFReadStreamClose(readStream);
  
