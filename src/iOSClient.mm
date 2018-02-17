@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
-#include <iostream>
 
 #import <Foundation/Foundation.h>
 
@@ -78,9 +77,6 @@ class iOSClient : public HTTPClient {
     } else {
       string auth_header = auth.createHeader();
       if (!auth_header.empty()) {
-	string s = auth.getHeaderName();
-	s += ": ";
-	s += auth_header;
         NSString *n = [NSString stringWithUTF8String:auth.getHeaderName()];
         NSString *v = [NSString stringWithUTF8String:auth_header.c_str()];
         [request setValue:v forHTTPHeaderField:n];
