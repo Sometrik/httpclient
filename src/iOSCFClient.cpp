@@ -26,8 +26,13 @@ class iOSCFClient : public HTTPClient {
     CFStringRef url_string = CFStringCreateWithCString(NULL, req.getURI().c_str(), kCFStringEncodingUTF8);
     CFURLRef cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string, NULL);
     
-    if (!cfUrl) cerr << "could not create url" << endl;
-
+    if (!cfUrl) {
+      cerr << "could not create url" << endl;
+      callback.handleResultCode(0);
+      callback.handleDisconnect();
+      return;
+    }
+    
     map<string, string> combined_headers;
     combined_headers["User-Agent"] = user_agent;
     
