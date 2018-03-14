@@ -25,7 +25,15 @@ class iOSCFClient : public HTTPClient {
       
     CFStringRef url_string = CFStringCreateWithCString(NULL, req.getURI().c_str(), kCFStringEncodingUTF8);
     CFURLRef cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string, NULL);
-    
+
+    if (!cfUrl) {
+      CFStringRef url_string2 = CFURLCreateStringByAddingPercentEscapes(NULL, url_string, NULL, NULL, kCFStringEncodingUTF8);
+      cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string2, NULL);    
+      CFRelease(url_string2);
+    }
+
+    CFRelease(url_string);
+
     if (!cfUrl) {
       cerr << "could not create url" << endl;
       callback.handleResultCode(0);
@@ -141,7 +149,6 @@ class iOSCFClient : public HTTPClient {
  
     CFReadStreamClose(readStream);
  
-    CFRelease(url_string);
     CFRelease(cfUrl);
     CFRelease(cfHttpReq);
     CFRelease(readStream);
