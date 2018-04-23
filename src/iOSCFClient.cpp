@@ -21,8 +21,6 @@ class iOSCFClient : public HTTPClient {
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
-    cerr << "loading " << req.getURI().c_str() << endl;
-      
     CFStringRef url_string = CFStringCreateWithCString(NULL, req.getURI().c_str(), kCFStringEncodingUTF8);
     CFURLRef cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string, NULL);
 
@@ -93,6 +91,8 @@ class iOSCFClient : public HTTPClient {
     bool headersReceived = false;
     CFIndex numBytesRead;    
     bool terminate = false;
+    int result_code = 0;
+    string redirectUrl;
     
     while (!terminate) {
       const int nBuffSize = 1024;
@@ -105,10 +105,10 @@ class iOSCFClient : public HTTPClient {
         
         if (myResponse) {
           // CFStringRef myStatusLine = CFHTTPMessageCopyResponseStatusLine(myResponse);
-          int result_code = (int)CFHTTPMessageGetResponseStatusCode(myResponse);
+          result_code = (int)CFHTTPMessageGetResponseStatusCode(myResponse);
         
           callback.handleResultCode(result_code);
-        
+	  
           CFDictionaryRef headerFields = CFHTTPMessageCopyAllHeaderFields(myResponse);
           auto size = CFDictionaryGetCount(headerFields);
           if (size > 0) {
@@ -122,8 +122,11 @@ class iOSCFClient : public HTTPClient {
               if (keyStr && valStr) {
                 callback.handleHeader(keyStr, valStr);
           
-                if (result_code >= 300 && result_code <= 399 && strcmp(keyStr, "Location") == 0 && !callback.handleRedirectUrl(valStr)) {
-                  terminate = true;
+                if (result_code >= 300 && result_code <= 399 && strcmp(keyStr, "Location") == 0) {
+		  redirectUrl = valStr;
+		  if (!callback.handleRedirectUrl(valStr)) {
+		    terminate = true;
+		  }
                 }
               }
             }
@@ -134,7 +137,7 @@ class iOSCFClient : public HTTPClient {
       }
 
       if (numBytesRead > 0) {
-        // cerr << "sending bytes: " << nBuffSize << ": " << (char*)buff << endl;
+        // cerr << "sending bytes: " << nBuffSize << ": " << (char*)buff << endl;
         if (!callback.handleChunk(numBytesRead, (char *)buff)) {
           terminate = true;
         }
@@ -152,6 +155,8 @@ class iOSCFClient : public HTTPClient {
     CFRelease(cfUrl);
     CFRelease(cfHttpReq);
     CFRelease(readStream);
+
+    cerr << "loaded " << req.getURI().c_str() << " (" << result_code << ", target = " << redirectUrl << ")\n";
 
 #if 0
     const BasicAuth * basic = dynamic_cast<const BasicAuth *>(&auth);
