@@ -13,6 +13,8 @@ using namespace std;
 #include <curl/curl.h>
 
 static bool is_initialized = false;
+static CURLSH * share;
+static pthread_mutex_t *share_lockarray;
 
 class CurlClient;
 
@@ -151,6 +153,7 @@ class CurlClient : public HTTPClient {
 	  assert(r != CURLE_INTERFACE_FAILED);
 	}
 #endif
+	curl_easy_setopt(curl, CURLOPT_SHARE, share);
 	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent.c_str());
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -327,6 +330,16 @@ CurlClientFactory::createClient2(const std::string & _user_agent, bool _enable_c
   return std::unique_ptr<CurlClient>(new CurlClient("", _user_agent, _enable_cookies, _enable_keepalive));
 }
 
+static void lock_cb(CURL *handle, curl_lock_data data, curl_lock_access access, void *userptr) {
+  assert(data >= 0 && data < 10);
+  pthread_mutex_lock(&share_lockarray[data]); /* uses a global lock array */
+}
+
+static void unlock_cb(CURL *handle, curl_lock_data data, void *userptr) {
+  assert(data >= 0 && data < 10);
+  pthread_mutex_unlock(&share_lockarray[data]); /* uses a global lock array */
+}
+
 void
 CurlClientFactory::globalInit() {
   is_initialized = true;
@@ -348,12 +361,25 @@ CurlClientFactory::globalInit() {
 #if 0
   gnutls_global_init();
 #endif
+
+  share_lockarray = (pthread_mutex_t *)malloc(10 * sizeof(pthread_mutex_t));
+  for (int i = 0; i < 10; i++) {
+    pthread_mutex_init(&(share_lockarray[i]), NULL);
+  }
+
+  share = curl_share_init();
+  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
+  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+  curl_share_setopt(share, CURLSHOPT_LOCKFUNC, lock_cb);
+  curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, unlock_cb);
 }
 
 void
 CurlClientFactory::globalCleanup() {
   is_initialized = false;
-  
+ 
   curl_global_cleanup();
 #ifndef __APPLE__
   kill_locks();
