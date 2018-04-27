@@ -123,7 +123,7 @@ class iOSCFClient : public HTTPClient {
           
                 if (result_code >= 300 && result_code <= 399 && strcmp(keyStr, "Location") == 0) {
 		  redirectUrl = valStr;
-		  if (!callback.handleRedirectUrl(valStr)) {
+		  if (!callback.handleRedirectUrl(redirectUrl)) {
 		    terminate = true;
 		  }
                 }
