@@ -23,13 +23,15 @@ class iOSCFClient : public HTTPClient {
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
     CFStringRef url_string = CFStringCreateWithCString(NULL, req.getURI().c_str(), kCFStringEncodingUTF8);
     CFURLRef cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string, NULL);
-    CFRelease(url_string);
-
+    
     if (!cfUrl) {
+      // url_string is needed here, do not release yet
       CFStringRef url_string2 = CFURLCreateStringByAddingPercentEscapes(NULL, url_string, NULL, NULL, kCFStringEncodingUTF8);
       cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string2, NULL);    
       CFRelease(url_string2);
     }
+
+    CFRelease(url_string);
 
     if (!cfUrl) {
       cerr << "could not create url" << endl;
