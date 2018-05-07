@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
-#include <iostream>
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CFNetwork/CFNetwork.h>
@@ -34,7 +33,6 @@ class iOSCFClient : public HTTPClient {
     CFRelease(url_string);
 
     if (!cfUrl) {
-      cerr << "could not create url" << endl;
       callback.handleResultCode(0);
       callback.handleDisconnect();
       return;
@@ -50,7 +48,6 @@ class iOSCFClient : public HTTPClient {
     
     CFHTTPMessageRef cfHttpReq;
     if (req.getType() == HTTPRequest::POST) {
-      cerr << "POST" << endl;
       cfHttpReq = CFHTTPMessageCreateRequest(kCFAllocatorDefault, CFSTR("POST"), cfUrl, kCFHTTPVersion1_1);
 
       combined_headers["Content-Length"] = to_string(req.getContent().size());
@@ -62,8 +59,6 @@ class iOSCFClient : public HTTPClient {
     } else {
       cfHttpReq = CFHTTPMessageCreateRequest(kCFAllocatorDefault, CFSTR("GET"), cfUrl, kCFHTTPVersion1_1);
     }
-
-    if (!cfHttpReq) cerr << "failed to create request" << endl;
     
     for (auto & hd : default_headers) {
       combined_headers[hd.first] = hd.second;      
@@ -86,7 +81,7 @@ class iOSCFClient : public HTTPClient {
     }
     
     if (!CFReadStreamOpen(readStream)) {
-      cerr << "failed to open stream" << endl;
+      // fail
     }
   
     bool headersReceived = false;
@@ -96,7 +91,7 @@ class iOSCFClient : public HTTPClient {
     string redirectUrl;
     
     while (!terminate) {
-      const int nBuffSize = 1024;
+      const int nBuffSize = 4096;
       UInt8 buff[nBuffSize];
       numBytesRead = CFReadStreamRead(readStream, buff, nBuffSize);
  
@@ -140,13 +135,11 @@ class iOSCFClient : public HTTPClient {
       }
 
       if (numBytesRead > 0) {
-        // cerr << "sending bytes: " << nBuffSize << ": " << (char*)buff << endl;
         if (!callback.handleChunk(numBytesRead, (char *)buff)) {
           terminate = true;
         }
       } else if (numBytesRead < 0) {
         CFStreamError error = CFReadStreamGetError(readStream);
-        cerr << "got error: " << error.error << endl;
         terminate = true;
       } else {
         terminate = true;
@@ -159,7 +152,7 @@ class iOSCFClient : public HTTPClient {
     CFRelease(cfHttpReq);
     CFRelease(readStream);
 
-    cerr << "loaded " << req.getURI().c_str() << " (" << result_code << ", target = " << redirectUrl << ")\n";
+    // cerr << "loaded " << req.getURI().c_str() << " (" << result_code << ", target = " << redirectUrl << ")\n";
 
 #if 0
     const BasicAuth * basic = dynamic_cast<const BasicAuth *>(&auth);
