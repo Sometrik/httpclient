@@ -11,6 +11,8 @@
 #include <CFNetwork/CFNetwork.h>
 #include <CFNetwork/CFHTTPStream.h>
 
+#define _kCFStreamPropertyReadTimeout CFSTR("_kCFStreamPropertyReadTimeout")
+
 using namespace std;
 
 class iOSCFClient : public HTTPClient {
@@ -78,6 +80,13 @@ class iOSCFClient : public HTTPClient {
     }
 
     CFReadStreamRef readStream = CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, cfHttpReq);
+
+    if (req.getReadTimeout()) {
+      double timeout = req.getReadTimeout();
+      CFNumberRef number = CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &timeout);
+      CFReadStreamSetProperty(readStream, _kCFStreamPropertyReadTimeout, number);
+      CFRelease(number);
+    }
     
     if (req.getFollowLocation()) {
       CFReadStreamSetProperty(readStream, kCFStreamPropertyHTTPShouldAutoredirect, kCFBooleanTrue);
@@ -88,7 +97,6 @@ class iOSCFClient : public HTTPClient {
     }
   
     bool headersReceived = false;
-    CFIndex numBytesRead;    
     bool terminate = false;
     int result_code = 0;
     string redirectUrl;
@@ -96,7 +104,7 @@ class iOSCFClient : public HTTPClient {
     while (!terminate) {
       const int nBuffSize = 1024;
       UInt8 buff[nBuffSize];
-      numBytesRead = CFReadStreamRead(readStream, buff, nBuffSize);
+      CFIndex numBytesRead = CFReadStreamRead(readStream, buff, nBuffSize);
  
       if (!headersReceived) {
         headersReceived = true;
