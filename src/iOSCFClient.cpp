@@ -42,6 +42,11 @@ class iOSCFClient : public HTTPClient {
     
     map<string, string> combined_headers;
     combined_headers["User-Agent"] = user_agent;
+
+    if (enable_keepalive) {
+      // combined_headers["Connection"] = "Keep-Alive";
+      combined_headers["Keep-Alive"] = "30";
+    }
     
     string auth_header = auth.createHeader();
     if (!auth_header.empty()) {
@@ -77,6 +82,8 @@ class iOSCFClient : public HTTPClient {
     }
 
     CFReadStreamRef readStream = CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, cfHttpReq);
+
+    CFReadStreamSetProperty(readStream, kCFStreamPropertyHTTPAttemptPersistentConnection, enable_keepalive ? kCFBooleanTrue : kCFBooleanFalse);
 
     if (req.getReadTimeout()) {
       double timeout = req.getReadTimeout();
