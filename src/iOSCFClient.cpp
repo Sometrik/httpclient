@@ -95,6 +95,14 @@ class iOSCFClient : public HTTPClient {
     if (req.getFollowLocation()) {
       CFReadStreamSetProperty(readStream, kCFStreamPropertyHTTPShouldAutoredirect, kCFBooleanTrue);
     }
+
+    if (strncasecmp(req.getURI().c_str(), "https", 5) == 0) {
+      CFMutableDictionaryRef pDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+      CFDictionarySetValue(pDict, kCFStreamSSLValidatesCertificateChain, kCFBooleanFalse);
+      // CFDictionarySetValue(pDict, kCFStreamPropertySocketSecurityLevel, kCFStreamSocketSecurityLevelSSLv3);
+      CFReadStreamSetProperty(readStream, kCFStreamPropertySSLSettings, pDict);
+      CFRelease(pDict);
+    }
     
     if (!CFReadStreamOpen(readStream)) {
       // fail
