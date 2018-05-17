@@ -239,7 +239,7 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
       std::string key = input.substr(0, pos1);
       std::string value = input.substr(pos2, pos3 - pos2);
 
-      if (key == "Location" && !callback->handleRedirectUrl(value)) {
+      if (strcasecmp(key.c_str(), "location") == 0 && !callback->handleRedirectUrl(value)) {
 	keep_running = false;
       }      
       callback->handleHeader(key, value);

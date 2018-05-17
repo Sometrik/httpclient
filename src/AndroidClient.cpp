@@ -245,7 +245,7 @@ public:
 	      const char * header = env->GetStringUTFChars(jheader, 0);
 	      callback.handleHeader(headerKey, header);
 	  
-	      if (strcasecmp(headerKey, "Location") == 0) {
+	      if (strcasecmp(headerKey, "location") == 0) {
 	        callback.handleRedirectUrl(header);
 	      }
 	  
