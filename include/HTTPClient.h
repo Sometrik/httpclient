@@ -29,6 +29,7 @@ class HTTPClient {
     req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     HTTPResponse response;
     request(req, noAuth, response);
     return response;
@@ -40,6 +41,7 @@ class HTTPClient {
     req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     HTTPResponse response;
     request(req, auth, response);
     return response;
@@ -51,6 +53,7 @@ class HTTPClient {
     req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     request(req, auth, callback);
   }
 
@@ -61,6 +64,7 @@ class HTTPClient {
     HTTPRequest req(HTTPRequest::GET, uri2);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     request(req, auth, callback);
   }
 
@@ -72,6 +76,7 @@ class HTTPClient {
     req.setFollowLocation(follow_location);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     HTTPResponse response;
     request(req, auth, response);
     return response;
@@ -85,6 +90,7 @@ class HTTPClient {
     req.setFollowLocation(follow_location);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     HTTPResponse response;
     request(req, noAuth, response);
     return response;
@@ -98,6 +104,7 @@ class HTTPClient {
     req.setFollowLocation(follow_location);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     request(req, noAuth, callback);
   }
 
@@ -106,6 +113,7 @@ class HTTPClient {
     req.setFollowLocation(follow_location);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     HTTPResponse response;
     request(req, noAuth, response);
     return response;
@@ -116,6 +124,7 @@ class HTTPClient {
     req.setFollowLocation(follow_location);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     HTTPResponse response;
     request(req, auth, response);
     return response;
@@ -126,6 +135,7 @@ class HTTPClient {
     req.setFollowLocation(follow_location);
     req.setConnectTimeout(getConnectTimeout());
     req.setReadTimeout(getReadTimeout());
+    req.setConnectionTimeout(getConnectionTimeout());
     request(req, noAuth, callback);
   }
 
@@ -140,9 +150,11 @@ class HTTPClient {
 
   void setConnectTimeout(int t) { connect_timeout = t; }
   void setReadTimeout(int t) { read_timeout = t; }
+  void setConnectionTimeout(int t) { connection_timeout = t; }
   
   int getConnectTimeout() const { return connect_timeout; }
   int getReadTimeout() const { return read_timeout; }
+  int getConnectionTimeout() const { return connection_timeout; }
   
   Authorization noAuth;
 
@@ -151,7 +163,7 @@ class HTTPClient {
   std::string cookie_jar;
   bool enable_cookies, enable_keepalive;
   std::map<std::string, std::string> default_headers;
-  int connect_timeout = 0, read_timeout = 0;
+  int connect_timeout = 0, read_timeout = 0, connection_timeout = 0;
 };
 
 class HTTPClientFactory {

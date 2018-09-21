@@ -112,6 +112,8 @@ class iOSCFClient : public HTTPClient {
     bool terminate = false;
     int result_code = 0;
     string redirectUrl;
+
+    time_t connection_start_time = time(0);
     
     while (!terminate) {
       const int nBuffSize = 4096;
@@ -166,6 +168,10 @@ class iOSCFClient : public HTTPClient {
         terminate = true;
       } else {
         terminate = true;
+      }
+
+      if (req.getConnectionTimeout() && connection_start_time + req.getConnectionTimeout() < time(0)) {
+	terminate = true;
       }
     }
  

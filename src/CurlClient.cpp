@@ -19,9 +19,10 @@ static pthread_mutex_t *share_lockarray;
 class CurlClient;
 
 struct curl_context_s {
+  time_t connection_time;
   time_t prev_data_time;
   time_t prev_idle_time;
-  int read_timeout;
+  int read_timeout, connection_timeout;
   HTTPClientInterface * callback;
 };
 
@@ -110,9 +111,10 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
+    // cerr << "setting connect timeout " << req.getConnectTimeout() << ", read timeout " << req.getReadTimeout() << ", connection timeout = " << req.getConnectionTimeout() << endl;
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
 
-    curl_context_s context = { time(0), 0, req.getReadTimeout(), &callback };
+    curl_context_s context = { time(0), time(0), 0, req.getReadTimeout(), req.getConnectionTimeout(), &callback };
       
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
@@ -162,7 +164,7 @@ class CurlClient : public HTTPClient {
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headers_func);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
-	curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 600);
+	curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 300);
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
 	curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
 
@@ -253,8 +255,14 @@ int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
   time_t current_time = time(0);
   curl_context_s * context = (curl_context_s *)clientp;
+  if (context && context->connection_timeout) {
+    int d = context->connection_time + context->connection_timeout - current_time;
+    // cerr << "checking connection timeout " << d << endl;
+  }
   if (!context) {
-    return 0;
+    return 0; // ?
+  } else if (context->connection_timeout && context->connection_time + context->connection_timeout < current_time) {
+    return 1;
   } else if (context->read_timeout && context->prev_data_time + context->read_timeout < current_time) {
     return 1;
   } else if (context->prev_idle_time != current_time) {

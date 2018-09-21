@@ -32,6 +32,7 @@ class HTTPRequest {
   bool getFollowLocation() const { return follow_location; }
   int getConnectTimeout() const { return connect_timeout; }
   int getReadTimeout() const { return read_timeout; }
+  int getConnectionTimeout() const { return connection_timeout; }
   const std::map<std::string, std::string> & getHeaders() const { return headers; }
   
   void setContent(const std::string & _content) { content = _content; }
@@ -40,6 +41,7 @@ class HTTPRequest {
   void setFollowLocation(bool f) { follow_location = f; }
   void setConnectTimeout(int t) { connect_timeout = t; }
   void setReadTimeout(int t) { read_timeout = t; }
+  void setConnectionTimeout(int t) { connection_timeout = t; }
   
   void addHeader(const char * name, const char * value) {
     headers[name] = value;
@@ -52,7 +54,7 @@ class HTTPRequest {
   std::string content_type;
   std::map<std::string, std::string> headers; 
   bool follow_location = true;
-  int connect_timeout = 0, read_timeout = 0;
+  int connect_timeout = 0, read_timeout = 0, connection_timeout = 0;
 };
 
 #endif
