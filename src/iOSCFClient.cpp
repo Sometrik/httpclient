@@ -1,10 +1,12 @@
 #include "iOSCFClient.h"
 
 #include "BasicAuth.h"
+#include "URI.h"
 
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+#include <iostream>
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CFNetwork/CFNetwork.h>
@@ -21,7 +23,16 @@ class iOSCFClient : public HTTPClient {
   
   }
 
+  ~iOSCFClient() {
+    if (persistentStream) {
+      CFReadStreamClose(persistentStream);
+      CFRelease(persistentStream);
+    }
+  }
+
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
+    URI uri(req.getURI());
+
     CFStringRef url_string = CFStringCreateWithCString(NULL, req.getURI().c_str(), kCFStringEncodingUTF8);
     CFURLRef cfUrl = CFURLCreateWithString(kCFAllocatorDefault, url_string, NULL);
     
@@ -81,6 +92,27 @@ class iOSCFClient : public HTTPClient {
       CFRelease(value);
     }
 
+    if (enable_keepalive && persistentStream != 0) {
+      if (persistentStreamDomain != uri.getDomain() || persistentStreamScheme != uri.getScheme()) {
+	cerr << "HTTPClient: closing persistent stream (target changed " << persistentStreamScheme << "://" << persistentStreamDomain << " to " << uri.getScheme() << "://" << uri.getDomain() << ")" << endl;
+	
+	CFReadStreamClose(persistentStream);
+	CFRelease(persistentStream);
+	persistentStream = 0;
+      } else {
+	CFStreamStatus status = CFReadStreamGetStatus(persistentStream);
+        if (status == kCFStreamStatusNotOpen ||
+            status == kCFStreamStatusClosed ||
+            status == kCFStreamStatusError) {
+	  cerr << "HTTPClient: closing persistent stream (connection closed " << persistentStreamScheme << "://" << persistentStreamDomain << ")" << endl;
+	  
+	  CFReadStreamClose(persistentStream);
+	  CFRelease(persistentStream);
+	  persistentStream = 0;
+        }
+      }
+    }
+    
     CFReadStreamRef readStream = CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, cfHttpReq);
 
     CFReadStreamSetProperty(readStream, kCFStreamPropertyHTTPAttemptPersistentConnection, enable_keepalive ? kCFBooleanTrue : kCFBooleanFalse);
@@ -109,7 +141,7 @@ class iOSCFClient : public HTTPClient {
     }
   
     bool headersReceived = false;
-    bool terminate = false;
+    bool terminate = false, reuse_stream = false;
     int result_code = 0;
     string redirectUrl;
 
@@ -164,23 +196,39 @@ class iOSCFClient : public HTTPClient {
           terminate = true;
         }
       } else if (numBytesRead < 0) {
+	cerr << "HTTPClient: read error\n";
         CFStreamError error = CFReadStreamGetError(readStream);
         terminate = true;
       } else {
-        terminate = true;
+        terminate = reuse_stream = true;
       }
-
-      if (req.getConnectionTimeout() && connection_start_time + req.getConnectionTimeout() < time(0)) {
+      
+      if (!terminate && req.getConnectionTimeout() && connection_start_time + req.getConnectionTimeout() < time(0)) {
 	terminate = true;
       }
     }
  
-    CFReadStreamClose(readStream);
- 
     CFRelease(cfUrl);
     CFRelease(cfHttpReq);
-    CFRelease(readStream);
 
+    if (!enable_keepalive || !reuse_stream) {
+      if (enable_keepalive) {
+	cerr << "HTTPClient: unable to reuse stream to " << uri.getScheme() << "://" << uri.getDomain() << endl;
+      }
+      CFReadStreamClose(readStream);
+      CFRelease(readStream);
+      if (persistentStream) {
+	CFReadStreamClose(persistentStream);
+	CFRelease(persistentStream);
+	persistentStream = 0;
+      }
+    } else if (!persistentStream) {
+      cerr << "HTTPClient: trying to keep alive connection to " << uri.getScheme() << "://" << uri.getDomain() << endl;
+      persistentStream = readStream;
+      persistentStreamScheme = uri.getScheme();
+      persistentStreamDomain = uri.getDomain();
+    }
+ 
     // cerr << "loaded " << req.getURI().c_str() << " (" << result_code << ", target = " << redirectUrl << ")\n";
 
 #if 0
@@ -198,6 +246,10 @@ class iOSCFClient : public HTTPClient {
   void clearCookies() override {
 
   }
+
+private:
+  CFReadStreamRef persistentStream = 0;
+  string persistentStreamDomain, persistentStreamScheme;
 };
 
 std::unique_ptr<HTTPClient>
