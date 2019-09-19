@@ -107,7 +107,7 @@ class CurlClient : public HTTPClient {
       curl_easy_setopt(curl, CURLOPT_POST, 0);
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
     }
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, req.getFollowLocation());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, req.getFollowLocation() ? 1 : 0);
     curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
