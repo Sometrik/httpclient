@@ -43,7 +43,7 @@ class HTTPRequest {
   void setReadTimeout(int t) { read_timeout = t; }
   void setConnectionTimeout(int t) { connection_timeout = t; }
   
-  void addHeader(const char * name, const char * value) {
+  void addHeader(const std::string & name, const std::string & value) {
     headers[name] = value;
   }
 
