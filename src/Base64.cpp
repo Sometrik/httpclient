@@ -43,7 +43,7 @@ Base64::encode(const unsigned char * input, size_t length, const char * indent, 
   return out;
 }
 
-unsigned char base64_decode_digit(char c) {
+static inline unsigned char base64_decode_digit(char c) {
   switch (c) {
   case '+': case '-': return 62;
   case '/': case '_': return 63;
