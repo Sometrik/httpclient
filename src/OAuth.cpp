@@ -7,8 +7,19 @@
 #include <cstdlib>
 #include <ctime>
 #include <map>
+#include <sys/time.h>
 
 using namespace std;
+
+static time_t get_current_time() {
+  struct timeval tv;
+  int r = gettimeofday(&tv, 0);
+  if (r == 0) {
+    return tv.tv_sec;
+  } else {
+    return 0;
+  }
+}
 
 string
 OAuth::createHeader() const {
@@ -26,7 +37,7 @@ OAuth::createHeader() const {
 
 void
 OAuth::initialize() {
-  oauth_timestamp = time(0);
+  oauth_timestamp = get_current_time();
   oauth_nonce.clear();
   for (unsigned int i = 0; i < 42; i++) {
     int v = rand() % 62;

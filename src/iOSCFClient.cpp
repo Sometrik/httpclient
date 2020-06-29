@@ -12,7 +12,19 @@
 #include <CFNetwork/CFNetwork.h>
 #include <CFNetwork/CFHTTPStream.h>
 
+#include <sys/time.h>
+
 #define _kCFStreamPropertyReadTimeout CFSTR("_kCFStreamPropertyReadTimeout")
+
+static time_t get_current_time() {
+  struct timeval tv;
+  int r = gettimeofday(&tv, 0);
+  if (r == 0) {
+    return tv.tv_sec;
+  } else {
+    return 0;
+  }
+}
 
 using namespace std;
 
@@ -145,7 +157,7 @@ class iOSCFClient : public HTTPClient {
     int result_code = 0;
     string redirectUrl;
 
-    time_t connection_start_time = time(0);
+    time_t connection_start_time = get_current_time();
     
     while (!terminate) {
       const int nBuffSize = 4096;
@@ -203,7 +215,7 @@ class iOSCFClient : public HTTPClient {
         terminate = reuse_stream = true;
       }
       
-      if (!terminate && req.getConnectionTimeout() && connection_start_time + req.getConnectionTimeout() < time(0)) {
+      if (!terminate && req.getConnectionTimeout() && connection_start_time + req.getConnectionTimeout() < get_current_time()) {
 	terminate = true;
       }
     }

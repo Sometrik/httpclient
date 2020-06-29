@@ -11,6 +11,7 @@
 using namespace std;
 
 #include <curl/curl.h>
+#include <sys/time.h>
 
 static bool is_initialized = false;
 static CURLSH * share;
@@ -25,6 +26,16 @@ struct curl_context_s {
   int read_timeout, connection_timeout;
   HTTPClientInterface * callback;
 };
+
+static time_t get_current_time() {
+  struct timeval tv;
+  int r = gettimeofday(&tv, 0);
+  if (r == 0) {
+    return tv.tv_sec;
+  } else {
+    return 0;
+  }
+}
 
 class CurlClient : public HTTPClient {
  public:
@@ -114,7 +125,8 @@ class CurlClient : public HTTPClient {
     // cerr << "setting connect timeout " << req.getConnectTimeout() << ", read timeout " << req.getReadTimeout() << ", connection timeout = " << req.getConnectionTimeout() << endl;
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
 
-    curl_context_s context = { time(0), time(0), 0, req.getReadTimeout(), req.getConnectionTimeout(), &callback };
+    time_t current_time = get_current_time();
+    curl_context_s context = { current_time, current_time, 0, req.getReadTimeout(), req.getConnectionTimeout(), &callback };
       
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
@@ -201,7 +213,7 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
 
   curl_context_s * context = (curl_context_s *)userp;
   assert(context);
-  context->prev_data_time = time(0);
+  context->prev_data_time = get_current_time();
   
   HTTPClientInterface * callback = context->callback;
   assert(callback);
@@ -212,7 +224,7 @@ size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
   curl_context_s * context = (curl_context_s *)userp;
   assert(context);
-  context->prev_data_time = time(0);
+  context->prev_data_time = get_current_time();
   
   size_t s = size * nmemb;
   bool keep_running = true;
@@ -253,7 +265,7 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
 
 int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-  time_t current_time = time(0);
+  time_t current_time = get_current_time();
   curl_context_s * context = (curl_context_s *)clientp;
   if (context && context->connection_timeout) {
     int d = context->connection_time + context->connection_timeout - current_time;
