@@ -16,11 +16,11 @@
 
 #define _kCFStreamPropertyReadTimeout CFSTR("_kCFStreamPropertyReadTimeout")
 
-static time_t get_current_time() {
+static long long get_current_time_ms() {
   struct timeval tv;
   int r = gettimeofday(&tv, 0);
   if (r == 0) {
-    return tv.tv_sec;
+    return (long long)1000 * tv.tv_sec + tv.tv_usec / 1000;
   } else {
     return 0;
   }
@@ -157,7 +157,7 @@ class iOSCFClient : public HTTPClient {
     int result_code = 0;
     string redirectUrl;
 
-    time_t connection_start_time = get_current_time();
+    long long connection_start_time = get_current_time_ms();
     
     while (!terminate) {
       const int nBuffSize = 4096;
@@ -215,7 +215,7 @@ class iOSCFClient : public HTTPClient {
         terminate = reuse_stream = true;
       }
       
-      if (!terminate && req.getConnectionTimeout() && connection_start_time + req.getConnectionTimeout() < get_current_time()) {
+      if (!terminate && req.getConnectionTimeout() && connection_start_time + 1000 * req.getConnectionTimeout() < get_current_time_ms()) {
 	terminate = true;
       }
     }

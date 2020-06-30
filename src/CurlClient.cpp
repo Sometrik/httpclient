@@ -20,18 +20,18 @@ static pthread_mutex_t *share_lockarray;
 class CurlClient;
 
 struct curl_context_s {
-  time_t connection_time;
-  time_t prev_data_time;
-  time_t prev_idle_time;
+  long long connection_time;
+  long long prev_data_time;
+  long long prev_idle_time;
   int read_timeout, connection_timeout;
   HTTPClientInterface * callback;
 };
 
-static time_t get_current_time() {
+static long long get_current_time_ms() {
   struct timeval tv;
   int r = gettimeofday(&tv, 0);
   if (r == 0) {
-    return tv.tv_sec;
+    return (long long)1000 * tv.tv_sec + tv.tv_usec / 1000;
   } else {
     return 0;
   }
@@ -125,8 +125,8 @@ class CurlClient : public HTTPClient {
     // cerr << "setting connect timeout " << req.getConnectTimeout() << ", read timeout " << req.getReadTimeout() << ", connection timeout = " << req.getConnectionTimeout() << endl;
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
 
-    time_t current_time = get_current_time();
-    curl_context_s context = { current_time, current_time, 0, req.getReadTimeout(), req.getConnectionTimeout(), &callback };
+    long long current_time_ms = get_current_time_ms();
+    curl_context_s context = { current_time_ms, current_time_ms, 0, req.getReadTimeout(), req.getConnectionTimeout(), &callback };
       
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
@@ -213,7 +213,7 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
 
   curl_context_s * context = (curl_context_s *)userp;
   assert(context);
-  context->prev_data_time = get_current_time();
+  context->prev_data_time = get_current_time_ms();
   
   HTTPClientInterface * callback = context->callback;
   assert(callback);
@@ -224,7 +224,7 @@ size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
   curl_context_s * context = (curl_context_s *)userp;
   assert(context);
-  context->prev_data_time = get_current_time();
+  context->prev_data_time = get_current_time_ms();
   
   size_t s = size * nmemb;
   bool keep_running = true;
@@ -265,20 +265,22 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
 
 int
 CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-  time_t current_time = get_current_time();
+  long long current_time_ms = get_current_time_ms();
   curl_context_s * context = (curl_context_s *)clientp;
+#if 0
   if (context && context->connection_timeout) {
-    int d = context->connection_time + context->connection_timeout - current_time;
+    int d = context->connection_time + 1000 * context->connection_timeout - current_time_ms;
     // cerr << "checking connection timeout " << d << endl;
   }
+#endif
   if (!context) {
-    return 0; // ?
-  } else if (context->connection_timeout && context->connection_time + context->connection_timeout < current_time) {
+    return 0; // do nothing
+  } else if (context->connection_timeout && context->connection_time + 1000 * context->connection_timeout <= current_time_ms) {
     return 1;
-  } else if (context->read_timeout && context->prev_data_time + context->read_timeout < current_time) {
+  } else if (context->read_timeout && context->prev_data_time + 1000 * context->read_timeout <= current_time_ms) {
     return 1;
-  } else if (context->prev_idle_time != current_time) {
-    context->prev_idle_time = current_time;
+  } else if (context->prev_idle_time + 1000 <= current_time_ms) {
+    context->prev_idle_time = current_time_ms;
     HTTPClientInterface * callback = context->callback;
     assert(callback);
     return callback->onIdle() ? 0 : 1;
