@@ -43,7 +43,7 @@ class URI {
   void setQueryString(const std::map<std::string, std::string> & pairs, const std::list<std::string> & singletons);
   void setQueryString(const std::map<std::string, std::string> & pairs);
 
-  static std::string formatQueryString(const std::map<std::string, std::string> & data);
+  static std::string formatQueryString(const std::map<std::string, std::string> & data, bool encode_punctuation = true);
 
   std::string getReducedDomain() const;
   long long getDomainHash() const;
@@ -61,7 +61,7 @@ class URI {
   void setIsCanonical(bool t) { is_canonical = t; }
 
   void urldecodeAll();
-  static std::string urlencode(const std::string & str, bool spaces_as_plus = false);
+  static std::string urlencode(const std::string & str, bool spaces_as_plus = false, bool encode_punctuation = true);
   static std::string urlencodeUtf8(const std::string & str);
   static std::string urldecode(const std::string & str);
 

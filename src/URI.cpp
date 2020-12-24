@@ -318,13 +318,13 @@ URI::setQueryString(const map<string, string> & pairs, const list<string> & sing
 }
 
 string
-URI::formatQueryString(const map<string, string> & data) {
+URI::formatQueryString(const map<string, string> & data, bool encode_punctuation) {
   string r;
   for (const auto & p : data) {
     if (!r.empty()) r += '&';
-    r += urlencode(p.first);
+    r += urlencode(p.first, false, encode_punctuation);
     r += '=';
-    r += urlencode(p.second);
+    r += urlencode(p.second, false, encode_punctuation);
   }
   return r;
 }
@@ -437,8 +437,9 @@ string
 URI::urlencodeUtf8(const string & str) {
   string output;
   for (unsigned int i = 0; i < str.size(); i++) {
-    unsigned char c = str[i]; // ?  
-    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~') {
+    unsigned char c = str[i];
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+	c == '-' || c == '_' || c == '.' || c == '~') { // || c == '(' || c == ')' || c == ':' || c == ',') {
       output += (char)c;
     } else {
       output += '%';
@@ -450,11 +451,13 @@ URI::urlencodeUtf8(const string & str) {
 }
 
 string
-URI::urlencode(const string & str, bool spaces_as_plus) {
+URI::urlencode(const string & str, bool spaces_as_plus, bool encode_punctuation) {
   string output;
   for (unsigned int i = 0; i < str.size(); i++) {
     unsigned char c = str[i]; // ?
-    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~') {
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+	c == '-' || c == '_' || c == '.' || c == '~' ||
+	(!encode_punctuation && (c == '(' || c == ')' || c == ':' || c == ','))) {
       output += (char)c;
     } else if (spaces_as_plus && c == ' ') {
       output += '+';
