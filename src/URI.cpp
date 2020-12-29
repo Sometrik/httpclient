@@ -457,7 +457,7 @@ URI::urlencode(const string & str, bool spaces_as_plus, bool encode_punctuation)
     unsigned char c = str[i]; // ?
     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
 	c == '-' || c == '_' || c == '.' || c == '~' ||
-	(!encode_punctuation && (c == '(' || c == ')' || c == ':' || c == ','))) {
+	(!encode_punctuation && (c == '(' || c == ')' || c == ':' || c == ',' || c == '>' || c == '<'))) {
       output += (char)c;
     } else if (spaces_as_plus && c == ' ') {
       output += '+';
