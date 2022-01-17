@@ -3,7 +3,7 @@
 
 #include <HTTPClientInterface.h>
 
-#include <map>
+#include <unordered_map>
 
 class HTTPResponse : public HTTPClientInterface {
  public:
@@ -26,7 +26,7 @@ class HTTPResponse : public HTTPClientInterface {
     content += s;
   }
 
-  const std::map<std::string, std::string> & getHeaders() const { return headers; }
+  const std::unordered_map<std::string, std::string> & getHeaders() const { return headers; }
 
   void handleResultCode(int code) override { result_code = code; }
   bool handleRedirectUrl(const std::string & url) override {
@@ -46,7 +46,7 @@ class HTTPResponse : public HTTPClientInterface {
   std::string error_text;
   std::string redirect_url;
   std::string content;
-  std::map<std::string, std::string> headers;
+  std::unordered_map<std::string, std::string> headers;
 };
 
 #endif
