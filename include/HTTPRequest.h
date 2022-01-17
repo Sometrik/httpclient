@@ -33,6 +33,7 @@ class HTTPRequest {
   int getConnectTimeout() const { return connect_timeout; }
   int getReadTimeout() const { return read_timeout; }
   int getConnectionTimeout() const { return connection_timeout; }
+  bool useHTTP2() const { return use_http2; }
   const std::map<std::string, std::string> & getHeaders() const { return headers; }
   
   void setContent(const std::string & _content) { content = _content; }
@@ -42,6 +43,7 @@ class HTTPRequest {
   void setConnectTimeout(int t) { connect_timeout = t; }
   void setReadTimeout(int t) { read_timeout = t; }
   void setConnectionTimeout(int t) { connection_timeout = t; }
+  void setUseHTTP2(bool t) { use_http2 = t; }
   
   void addHeader(const std::string & name, const std::string & value) {
     headers[name] = value;
@@ -55,6 +57,7 @@ class HTTPRequest {
   std::map<std::string, std::string> headers; 
   bool follow_location = true;
   int connect_timeout = 0, read_timeout = 0, connection_timeout = 0;
+  bool use_http2 = false;
 };
 
 #endif

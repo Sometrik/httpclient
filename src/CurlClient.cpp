@@ -8,6 +8,8 @@
 #include <cctype>
 #include <pthread.h>
 
+#include <iostream>
+
 using namespace std;
 
 #include <curl/curl.h>
@@ -118,9 +120,17 @@ class CurlClient : public HTTPClient {
       curl_easy_setopt(curl, CURLOPT_POST, 0);
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
     }
+    if (req.useHTTP2()) {
+      curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE); // CURL_HTTP_VERSION_2TLS); // CURL_HTTP_VERSION_2_0);
+      curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
+    } else {
+      curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_NONE);
+      curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_DEFAULT);
+    }
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, req.getFollowLocation() ? 1 : 0);
     curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     // cerr << "setting connect timeout " << req.getConnectTimeout() << ", read timeout " << req.getReadTimeout() << ", connection timeout = " << req.getConnectionTimeout() << endl;
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, req.getConnectTimeout());
@@ -131,8 +141,11 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &context);
-
-    curl_easy_perform(curl);
+    
+    auto ret = curl_easy_perform(curl);
+    if (ret == CURLE_HTTP_RETURNED_ERROR) {
+      cerr << "failed to request\n";
+    }
     
     callback.handleDisconnect();
     
@@ -252,7 +265,7 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
       for (; pos3 > 0 && isspace(input[pos3 - 1]); pos3--) { }
       std::string key = input.substr(0, pos1);
       std::string value = input.substr(pos2, pos3 - pos2);
-
+      
       if (strcasecmp(key.c_str(), "location") == 0 && !callback->handleRedirectUrl(value)) {
 	keep_running = false;
       }      
@@ -289,9 +302,9 @@ CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double u
   }
 }
 
-#ifndef __APPLE__
 static pthread_mutex_t *lockarray;
 
+#if 0
 #include <openssl/crypto.h>
 
 static void lock_callback(int mode, int type, const char *file, int line) {
@@ -314,8 +327,10 @@ static unsigned long thread_id(void) {
 #endif
   return(ret);
 }
- 
+#endif
+
 static void init_locks(void) {
+#if 0
   int i;
  
   lockarray = (pthread_mutex_t *)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
@@ -325,10 +340,12 @@ static void init_locks(void) {
  
   CRYPTO_set_id_callback((unsigned long (*)())thread_id);
   CRYPTO_set_locking_callback(lock_callback); // (void (*)())lock_callback);
+#endif
 }
- 
+
 static void kill_locks(void)
 {
+#if 0
   int i;
  
   CRYPTO_set_locking_callback(NULL);
@@ -336,8 +353,8 @@ static void kill_locks(void)
     pthread_mutex_destroy(&(lockarray[i]));
  
   OPENSSL_free(lockarray);
-}
 #endif
+}
 
 #if 0
 #include <gcrypt.h>
@@ -390,10 +407,10 @@ CurlClientFactory::globalInit() {
   }
 
   share = curl_share_init();
-  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
+  // curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
-  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
-  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+  // curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+  // curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
   curl_share_setopt(share, CURLSHOPT_LOCKFUNC, lock_cb);
   curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, unlock_cb);
 }
