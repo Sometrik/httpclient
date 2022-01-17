@@ -10,6 +10,7 @@ class Base64Url {
 
   static long long decode_id(const std::string & s);
   static std::string encode_id(long long id);
+  static std::string encode_id_bigendian(long long id);
 };
 
 #endif

@@ -307,3 +307,24 @@ Base64Url::encode_id(long long id) {
   
   return s;
 }
+
+std::string
+Base64Url::encode_id_bigendian(long long id) {
+  unsigned char bytes[8];
+  bytes[7] = id & 0xff;
+  bytes[6] = (id >> 8) & 0xff;
+  bytes[5] = (id >> 16) & 0xff;
+  bytes[4] = (id >> 24) & 0xff;
+  bytes[3] = (id >> 32) & 0xff;
+  bytes[2] = (id >> 40) & 0xff;
+  bytes[1] = (id >> 48) & 0xff;
+  bytes[0] = (id >> 56) & 0xff;
+
+  char * output = new char[12];
+  size_t outputLen;
+  encode(bytes, 8, output, &outputLen);
+  string s(output, outputLen);
+  delete[] output;
+  
+  return s;
+}
