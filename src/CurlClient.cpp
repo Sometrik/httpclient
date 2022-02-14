@@ -111,7 +111,7 @@ class CurlClient : public HTTPClient {
       headers = curl_slist_append(headers, s.c_str());
     }
     
-    if (req.getType() == HTTPRequest::POST) {
+    if (req.getType() == HTTPRequest::POST || req.getType() == HTTPRequest::OPTIONS) {
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 0);
       curl_easy_setopt(curl, CURLOPT_POST, 1);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, req.getContent().size());
@@ -119,6 +119,11 @@ class CurlClient : public HTTPClient {
     } else {
       curl_easy_setopt(curl, CURLOPT_POST, 0);
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+    }
+    if (req.getType() == HTTPRequest::OPTIONS) {
+      curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "OPTIONS");
+    } else {
+      curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, nullptr);
     }
     if (req.useHTTP2()) {
       curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE); // CURL_HTTP_VERSION_2TLS); // CURL_HTTP_VERSION_2_0);

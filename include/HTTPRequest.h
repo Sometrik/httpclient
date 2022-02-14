@@ -10,7 +10,8 @@ class HTTPRequest {
     GET = 1,
     POST,
     PUT,
-    DELETE
+    DELETE,
+    OPTIONS
   };
 
  HTTPRequest(RequestType _type, const std::string & _uri) : type(_type), uri(_uri) { }
@@ -21,6 +22,7 @@ class HTTPRequest {
     case POST: return "POST";
     case PUT: return "PUT";
     case DELETE: return "DELETE";
+    case OPTIONS: return "OPTIONS";
     }
     return "";
   }
@@ -44,7 +46,8 @@ class HTTPRequest {
   void setReadTimeout(int t) { read_timeout = t; }
   void setConnectionTimeout(int t) { connection_timeout = t; }
   void setUseHTTP2(bool t) { use_http2 = t; }
-  
+
+  void setHeaders(const std::map<std::string, std::string> & _headers) { headers = _headers; }
   void addHeader(const std::string & name, const std::string & value) {
     headers[name] = value;
   }
