@@ -32,3 +32,6 @@
 
 # Emacs backup copies
 *~
+/.vs/httpclient/v17
+*.json
+/.vs
