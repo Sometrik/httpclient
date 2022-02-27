@@ -56,105 +56,75 @@ static const uint8_t base64urlDecTable[128] =
     0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
   };
   
-void
-Base64Url::encode(const void *input, size_t inputLen, char *output, size_t *outputLen) {
-  size_t n;
+std::string
+Base64Url::encode(const void * input, size_t inputLen) {
   uint8_t a;
   uint8_t b;
   uint8_t c;
   uint8_t d;
-  const uint8_t *p;
-  
+
+  std::string output;
+      
   //Point to the first byte of the input data
-  p = (const uint8_t *) input;
+  const uint8_t *p = (const uint8_t *) input;
   
   //Divide the input stream into blocks of 3 bytes
-  n = inputLen / 3;
+  size_t n = inputLen / 3;
   
   //A full encoding quantum is always completed at the end of a quantity
-  if(inputLen == (n * 3 + 1))
-    {
-      //The final quantum of encoding input is exactly 8 bits
-      if(input != NULL && output != NULL)
-	{
-          //Read input data
-          a = (p[n * 3] & 0xFC) >> 2;
-          b = (p[n * 3] & 0x03) << 4;
-  
-          //The final unit of encoded output will be two characters
-          output[n * 4] = base64urlEncTable[a];
-          output[n * 4 + 1] = base64urlEncTable[b];
-          output[n * 4 + 2] = '\0';
-	}
-  
-      //Length of the encoded string (excluding the terminating NULL)
-      if(outputLen != NULL)
-	{
-          *outputLen = n * 4 + 2;
-	}
+  if (inputLen == (n * 3 + 1)) {      
+    // The final quantum of encoding input is exactly 8 bits
+    if (input) {
+      output = std::string(n * 4 + 2, ' ');
+
+      // Read input data
+      a = (p[n * 3] & 0xFC) >> 2;
+      b = (p[n * 3] & 0x03) << 4;
+      
+      //The final unit of encoded output will be two characters
+      output[n * 4] = base64urlEncTable[a];
+      output[n * 4 + 1] = base64urlEncTable[b];
     }
-  else if(inputLen == (n * 3 + 2))
-    {
-      //The final quantum of encoding input is exactly 16 bits
-      if(input != NULL && output != NULL)
-	{
-          //Read input data
-          a = (p[n * 3] & 0xFC) >> 2;
-          b = ((p[n * 3] & 0x03) << 4) | ((p[n * 3 + 1] & 0xF0) >> 4);
-          c = (p[n * 3 + 1] & 0x0F) << 2;
-  
-          //The final unit of encoded output will be three characters followed
-          //by one "=" padding character
-          output[n * 4] = base64urlEncTable[a];
-          output[n * 4 + 1] = base64urlEncTable[b];
-          output[n * 4 + 2] = base64urlEncTable[c];
-          output[n * 4 + 3] = '\0';
-	}
-  
-      //Length of the encoded string (excluding the terminating NULL)
-      if(outputLen != NULL)
-	{
-          *outputLen = n * 4 + 3;
-	}
+  } else if(inputLen == (n * 3 + 2)) {
+    // The final quantum of encoding input is exactly 16 bits
+    if (input) {
+      output = std::string(n * 4 + 3, ' ');
+
+      // Read input data
+      a = (p[n * 3] & 0xFC) >> 2;
+      b = ((p[n * 3] & 0x03) << 4) | ((p[n * 3 + 1] & 0xF0) >> 4);
+      c = (p[n * 3 + 1] & 0x0F) << 2;
+      
+      // The final unit of encoded output will be three characters followed
+      // by one "=" padding character
+      output[n * 4] = base64urlEncTable[a];
+      output[n * 4 + 1] = base64urlEncTable[b];
+      output[n * 4 + 2] = base64urlEncTable[c];
     }
-  else
-    {
-      //The final quantum of encoding input is an integral multiple of 24 bits
-      if(output != NULL)
-	{
-          //The final unit of encoded output will be an integral multiple of 4
-          //characters
-          output[n * 4] = '\0';
-	}
+  } else {
+    // The final quantum of encoding input is an integral multiple of 24 bits
+    // The final unit of encoded output will be an integral multiple of 4 characters
+    output = std::string(n * 4, ' ');
+  }
   
-      //Length of the encoded string (excluding the terminating NULL)
-      if(outputLen != NULL)
-	{
-          *outputLen = n * 4;
-	}
+  if (input) {
+    // The input data is processed block by block
+    while (n-- > 0) {
+      // Read input data
+      a = (p[n * 3] & 0xFC) >> 2;
+      b = ((p[n * 3] & 0x03) << 4) | ((p[n * 3 + 1] & 0xF0) >> 4);
+      c = ((p[n * 3 + 1] & 0x0F) << 2) | ((p[n * 3 + 2] & 0xC0) >> 6);
+      d = p[n * 3 + 2] & 0x3F;
+      
+      // Map each 3-byte block to 4 printable characters using the Base64url character set
+      output[n * 4] = base64urlEncTable[a];
+      output[n * 4 + 1] = base64urlEncTable[b];
+      output[n * 4 + 2] = base64urlEncTable[c];
+      output[n * 4 + 3] = base64urlEncTable[d];
     }
-  
-  //If the output parameter is NULL, then the function calculates the
-  //length of the resulting Base64url string without copying any data
-  if(input != NULL && output != NULL)
-    {
-      //The input data is processed block by block
-      while(n-- > 0)
-	{
-          //Read input data
-          a = (p[n * 3] & 0xFC) >> 2;
-          b = ((p[n * 3] & 0x03) << 4) | ((p[n * 3 + 1] & 0xF0) >> 4);
-          c = ((p[n * 3 + 1] & 0x0F) << 2) | ((p[n * 3 + 2] & 0xC0) >> 6);
-          d = p[n * 3 + 2] & 0x3F;
-  
-          //Map each 3-byte block to 4 printable characters using the Base64url
-          //character set
-          output[n * 4] = base64urlEncTable[a];
-          output[n * 4 + 1] = base64urlEncTable[b];
-          output[n * 4 + 2] = base64urlEncTable[c];
-          output[n * 4 + 3] = base64urlEncTable[d];
-	}
-    }
+  }
+
+  return output;
 }
   
   
@@ -299,13 +269,7 @@ Base64Url::encode_id(long long id) {
   bytes[6] = (id >> 48) & 0xff;
   bytes[7] = (id >> 56) & 0xff;
 
-  char * output = new char[12];
-  size_t outputLen;
-  encode(bytes, 8, output, &outputLen);
-  string s(output, outputLen);
-  delete[] output;
-  
-  return s;
+  return encode(bytes, 8);
 }
 
 std::string
@@ -320,11 +284,5 @@ Base64Url::encode_id_bigendian(long long id) {
   bytes[1] = (id >> 48) & 0xff;
   bytes[0] = (id >> 56) & 0xff;
 
-  char * output = new char[12];
-  size_t outputLen;
-  encode(bytes, 8, output, &outputLen);
-  string s(output, outputLen);
-  delete[] output;
-  
-  return s;
+  return encode(bytes, 8);
 }
