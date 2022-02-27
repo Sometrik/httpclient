@@ -140,7 +140,7 @@ Base64Url::encode(const void * input, size_t inputLen) {
 bool
 Base64Url::decode(const char *input, size_t inputLen, void *output, size_t *outputLen)
 {
-  error_t error;
+  int error;
   uint32_t value;
   unsigned int c;
   size_t i;
