@@ -6,18 +6,34 @@
 #include <cstring>
 #include <cassert>
 #include <cctype>
+
+#ifndef WIN32
 #include <pthread.h>
+#endif
+
+#if defined(WIN32) || defined(WIN64) 
+#include <windows.h>
+#include <sysinfoapi.h>
+
+#define strcasecmp _stricmp
+#endif
 
 #include <iostream>
 
 using namespace std;
 
 #include <curl/curl.h>
+
+#ifndef WIN32
 #include <sys/time.h>
+#endif
 
 static bool is_initialized = false;
 static CURLSH * share;
+
+#ifndef WIN32
 static pthread_mutex_t *share_lockarray;
+#endif
 
 class CurlClient;
 
@@ -30,6 +46,13 @@ struct curl_context_s {
 };
 
 static long long get_current_time_ms() {
+#ifdef WIN32
+  FILETIME ft_now;
+  GetSystemTimeAsFileTime(&ft_now);
+  long long ll_now = (LONGLONG)ft_now.dwLowDateTime + (((LONGLONG)ft_now.dwHighDateTime) << 32LL);
+  ll_now /= 10000;
+  return ll_now - 116444736000000000LL;
+#else
   struct timeval tv;
   int r = gettimeofday(&tv, 0);
   if (r == 0) {
@@ -37,6 +60,7 @@ static long long get_current_time_ms() {
   } else {
     return 0;
   }
+#endif
 }
 
 class CurlClient : public HTTPClient {
@@ -307,7 +331,9 @@ CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double u
   }
 }
 
+#ifndef WIN32
 static pthread_mutex_t *lockarray;
+#endif
 
 #if 0
 #include <openssl/crypto.h>
@@ -374,6 +400,7 @@ CurlClientFactory::createClient2(const std::string & _user_agent, bool _enable_c
   return std::unique_ptr<CurlClient>(new CurlClient("", _user_agent, _enable_cookies, _enable_keepalive));
 }
 
+#ifndef WIN32
 static void lock_cb(CURL *handle, curl_lock_data data, curl_lock_access access, void *userptr) {
   assert(data >= 0 && data < 10);
   pthread_mutex_lock(&share_lockarray[data]); /* uses a global lock array */
@@ -383,6 +410,7 @@ static void unlock_cb(CURL *handle, curl_lock_data data, void *userptr) {
   assert(data >= 0 && data < 10);
   pthread_mutex_unlock(&share_lockarray[data]); /* uses a global lock array */
 }
+#endif
 
 void
 CurlClientFactory::globalInit() {
@@ -406,18 +434,22 @@ CurlClientFactory::globalInit() {
   gnutls_global_init();
 #endif
 
+#ifndef WIN32
   share_lockarray = (pthread_mutex_t *)malloc(10 * sizeof(pthread_mutex_t));
   for (int i = 0; i < 10; i++) {
     pthread_mutex_init(&(share_lockarray[i]), NULL);
   }
+#endif
 
   share = curl_share_init();
   // curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
   // curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
   // curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+#ifndef WIN32
   curl_share_setopt(share, CURLSHOPT_LOCKFUNC, lock_cb);
   curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, unlock_cb);
+#endif
 }
 
 void
