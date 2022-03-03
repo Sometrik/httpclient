@@ -179,7 +179,7 @@ class CurlClient : public HTTPClient {
     auto ret = curl_easy_perform(curl);
     if (ret != CURLE_OK) {
       size_t len = strlen(errbuf);
-      if (len) callback.handleErrorText(errbuff);
+      if (len) callback.handleErrorText(errbuf);
       else {
 	callback.handleErrorText(curl_easy_strerror(ret));
       }
