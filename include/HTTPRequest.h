@@ -9,8 +9,8 @@ class HTTPRequest {
   enum RequestType { 
     GET = 1,
     POST,
-    PUT,
-    DELETE,
+    // PUT,
+    // DELETE,
     OPTIONS
   };
 
@@ -20,8 +20,8 @@ class HTTPRequest {
     switch (type) {
     case GET: return "GET";
     case POST: return "POST";
-    case PUT: return "PUT";
-    case DELETE: return "DELETE";
+    // case PUT: return "PUT";
+    // case DELETE: return "DELETE";
     case OPTIONS: return "OPTIONS";
     }
     return "";
