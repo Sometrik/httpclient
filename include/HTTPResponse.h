@@ -17,18 +17,21 @@ class HTTPResponse : public HTTPClientInterface {
   int getResultCode() const { return result_code; }
   const std::string & getRedirectUrl() const { return redirect_url; }
 
+#if 0
   void setResultCode(int _code) { result_code = _code; }
   void setErrorText(const std::string & _text) { error_text = _text; }
   void setRedirectUrl(const std::string & url) { redirect_url = url; }
   void setContent(const std::string & _content) { content = _content; }
-
+  
   void appendContent(const std::string & s) {
     content += s;
   }
+#endif
 
   const std::unordered_map<std::string, std::string> & getHeaders() const { return headers; }
 
   void handleResultCode(int code) override { result_code = code; }
+  void handleErrorText(std::string s) override { error_text = s; }
   bool handleRedirectUrl(const std::string & url) override {
     redirect_url = url;
     return true;

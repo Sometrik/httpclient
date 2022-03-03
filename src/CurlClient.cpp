@@ -172,8 +172,9 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &context);
     
     auto ret = curl_easy_perform(curl);
-    if (ret == CURLE_HTTP_RETURNED_ERROR) {
+    if (ret != CURLE_OK) {
       cerr << "failed to request\n";
+      callback.handleErrorText(curl_easy_strerror(ret));
     }
     
     callback.handleDisconnect();
