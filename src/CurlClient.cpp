@@ -218,6 +218,7 @@ class CurlClient : public HTTPClient {
 	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progress_func);
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, headers_func);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
 	curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 300);
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
