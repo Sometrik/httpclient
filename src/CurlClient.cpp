@@ -170,11 +170,19 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &context);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &context);
+
+    char errbuf[CURL_ERROR_SIZE];
+    errbuf[0] = 0;
     
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+     
     auto ret = curl_easy_perform(curl);
     if (ret != CURLE_OK) {
-      cerr << "failed to request\n";
-      callback.handleErrorText(curl_easy_strerror(ret));
+      size_t len = strlen(errbuf);
+      if (len) callback.handleErrorText(errbuff);
+      else {
+	callback.handleErrorText(curl_easy_strerror(ret));
+      }
     }
     
     callback.handleDisconnect();
