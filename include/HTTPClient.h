@@ -155,10 +155,12 @@ class HTTPClient {
   int getConnectTimeout() const { return connect_timeout; }
   int getReadTimeout() const { return read_timeout; }
   int getConnectionTimeout() const { return connection_timeout; }
-  
+
   Authorization noAuth;
 
  protected:
+  const std::string & getUserAgent() const { return user_agent; }
+
   std::string user_agent;
   std::string cookie_jar;
   bool enable_cookies, enable_keepalive;
