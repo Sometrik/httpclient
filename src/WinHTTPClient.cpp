@@ -74,7 +74,7 @@ class WinHTTPClient : public HTTPClient {
     auto target_scheme = uri.getScheme();
     auto target_host = from_utf8(uri.getDomain());
     auto target_port = uri.getPort();
-    auto target_path = from_utf8(uri.getPath());
+    auto target_path = from_utf8(uri.getPath() + "?" + uri.getQueryString());
 
     bool is_secure = false;
     if (!target_port) {
