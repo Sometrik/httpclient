@@ -137,8 +137,6 @@ class WinHTTPClient : public HTTPClient {
 	  }
 	  
 	  DWORD dwSize = 0;
-	  DWORD dwDownloaded = 0;
-	  LPSTR pszOutBuffer;
 
 	  if (has_data) {
 	    dwSize = req.getContent().size();
@@ -151,6 +149,16 @@ class WinHTTPClient : public HTTPClient {
 	    
 	    DWORD headerSize = 0;
 
+	    DWORD dwStatusCode = 0;
+	    DWORD dwSize = sizeof(dwStatusCode);
+	    
+	    if (WinHttpQueryHeaders(hRequest, 
+				    WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, 
+				    WINHTTP_HEADER_NAME_BY_INDEX, 
+				    &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
+	      callback->handleResultCode(dwStatusCode);
+	    }
+	    
 	    if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX)) {
 	      // Allocate buffer by header length
 	      // If the function fails and ERROR_INSUFFICIENT_BUFFER is returned, lpdwBufferLength specifies the number of bytes that the application must allocate to receive the string.
@@ -160,6 +168,31 @@ class WinHTTPClient : public HTTPClient {
 
   		}	
 	      }
+	    }
+
+	    while ( 1 ) {
+	      // Check for available data to get data size in bytes
+	      dwSize = 0;
+	      if (!WinHttpQueryDataAvailable(hRequest, &dwSize)){
+                bResults = FALSE;
+                break;
+	      }
+	      if (!dwSize) {
+                break;  //data size 0          
+	      }
+
+	      // Allocate buffer by data size
+	      unique_ptr<char[]> pszOutBuffer(new char[dwSize + 1]);	     
+	      // Read data from server
+	      DWORD dwDownloaded = 0;
+	      if (WinHttpReadData(hRequest, pszOutBuffer, dwSize, &dwDownloaded)) {
+		bool r = callback.handleChunk(dwDownloaded, outBuffer.get());
+		if (!r) break;
+	      } else {
+		break;
+	      }
+
+	      if (!dwDownloaded) break;
 	    }
 	    
 	    callback.handleDisconnect();
