@@ -156,7 +156,7 @@ class WinHTTPClient : public HTTPClient {
 				    WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, 
 				    WINHTTP_HEADER_NAME_BY_INDEX, 
 				    &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
-	      callback->handleResultCode(dwStatusCode);
+	      callback.handleResultCode(dwStatusCode);
 	    }
 	    
 	    if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX)) {
@@ -174,7 +174,6 @@ class WinHTTPClient : public HTTPClient {
 	      // Check for available data to get data size in bytes
 	      dwSize = 0;
 	      if (!WinHttpQueryDataAvailable(hRequest, &dwSize)){
-                bResults = FALSE;
                 break;
 	      }
 	      if (!dwSize) {
@@ -182,10 +181,10 @@ class WinHTTPClient : public HTTPClient {
 	      }
 
 	      // Allocate buffer by data size
-	      unique_ptr<char[]> pszOutBuffer(new char[dwSize + 1]);	     
+	      unique_ptr<char[]> outBuffer(new char[dwSize + 1]);	     
 	      // Read data from server
 	      DWORD dwDownloaded = 0;
-	      if (WinHttpReadData(hRequest, pszOutBuffer, dwSize, &dwDownloaded)) {
+	      if (WinHttpReadData(hRequest, outBuffer.get(), dwSize, &dwDownloaded)) {
 		bool r = callback.handleChunk(dwDownloaded, outBuffer.get());
 		if (!r) break;
 	      } else {
