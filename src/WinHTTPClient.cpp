@@ -130,10 +130,10 @@ class WinHTTPClient : public HTTPClient {
 	      combined_headers["Content-Type"] = req.getContentType();
 	    }
 	  }
-	  
+
 	  for (auto & [ name, value ] : combined_headers) {
 	    auto header = from_utf8(name + ": " + value + "\r\n");
-	    WinHttpAddRequestHeaders(hRequest, header.c_str(), header.length(), WINHTTP_ADDREQ_FLAG_ADD);
+	    WinHttpAddRequestHeaders(hRequest, header.c_str(), -1, WINHTTP_ADDREQ_FLAG_REPLACE | WINHTTP_ADDREQ_FLAG_ADD);
 	  }
 	  
 	  DWORD dwSize = 0;
