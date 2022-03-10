@@ -71,10 +71,13 @@ class WinHTTPClient : public HTTPClient {
 
      DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_ALL;
      WinHttpSetOption(session_, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
+
+#if 0
      DWORD protocols = WINHTTP_PROTOCOL_FLAG_HTTP2;
      WinHttpSetOption(session_, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL, &protocols, sizeof(protocols));
      DWORD secure_protocols = WINHTTP_FLAG_SECURE_PROTOCOL_ALL;
      WinHttpSetOption(session_, WINHTTP_OPTION_SECURE_PROTOCOLS, &secure_protocols, sizeof(secure_protocols));
+#endif
    }
 
   ~WinHTTPClient() {
@@ -108,12 +111,6 @@ class WinHTTPClient : public HTTPClient {
       string tmp0 = "created handle for host: " + uri.getDomain() + ", port: " + to_string(target_port) + "\n";
       OutputDebugStringA(tmp0.c_str());
 
-      DWORD disabled_features = 0;
-      if (!req.getFollowLocation()) disabled_features |= WINHTTP_DISABLE_REDIRECTS;
-      if (!enable_keepalive) disabled_features |= WINHTTP_DISABLE_KEEP_ALIVE;
-      if (!enable_cookies) disabled_features |= WINHTTP_DISABLE_COOKIES;
-      WinHttpSetOption(session_, WINHTTP_OPTION_DISABLE_FEATURE, &disabled_features, sizeof(disabled_features));
-
       // WINHTTP_OPTION_CONNECT_TIMEOUT (ms)
       // WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT (ms)
       // WINHTTP_OPTION_RECEIVE_TIMEOUT (ms)
@@ -140,6 +137,12 @@ class WinHTTPClient : public HTTPClient {
 	  
       auto hRequest = WinHttpOpenRequest(hConnect, request_type.c_str(), target_path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlags);
       if (hRequest) {
+	DWORD disabled_features = 0;
+	if (!req.getFollowLocation()) disabled_features |= WINHTTP_DISABLE_REDIRECTS;
+	if (!enable_keepalive) disabled_features |= WINHTTP_DISABLE_KEEP_ALIVE;
+	if (!enable_cookies) disabled_features |= WINHTTP_DISABLE_COOKIES;
+	WinHttpSetOption(hRequest, WINHTTP_OPTION_DISABLE_FEATURE, &disabled_features, sizeof(disabled_features));
+
 	string tmp2 = "created request, path: " + target_path0 + "\n";
 	OutputDebugStringA(tmp2.c_str());
 
@@ -178,6 +181,8 @@ class WinHTTPClient : public HTTPClient {
 	  
 	auto & postData = req.getContent();
 	
+	OutputDebugStringA("Sending request\n");
+
 	bool req_r = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (void*)postData.data(), postData.size(), postData.size(), 0);
 
 	if (is_secure && !req_r) {
@@ -188,9 +193,11 @@ class WinHTTPClient : public HTTPClient {
 	}
 
 	if (req_r && WinHttpReceiveResponse(hRequest, NULL)) {
-	  DWORD headerSize = 0;
+	  OutputDebugStringA("Received response\n");
+
 	  bool terminate = false;
 
+#if 0
 	  DWORD dwStatusCode = 0;
 	  DWORD dwSize = sizeof(dwStatusCode);
 
@@ -198,7 +205,7 @@ class WinHTTPClient : public HTTPClient {
 	    WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
 	    WINHTTP_HEADER_NAME_BY_INDEX,
 	    &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
-	    string tmp3 = "got result code: " + to_string(dwStatusCode);
+	    string tmp3 = "got result code: " + to_string(dwStatusCode) + "\n";
 	    OutputDebugStringA(tmp3.c_str());
 	    callback.handleResultCode(dwStatusCode);
 	  }
@@ -206,24 +213,33 @@ class WinHTTPClient : public HTTPClient {
 	    string tmp3 = "failed to get response code: " + to_string(GetLastError());
 	    OutputDebugStringA(tmp3.c_str());
 	  }
+#endif
+	  DWORD headerSize = 0;
+	  WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX);
 
-	  if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX)) {
-	    // Allocate buffer by header length
-	    // If the function fails and ERROR_INSUFFICIENT_BUFFER is returned, lpdwBufferLength specifies the number of bytes that the application must allocate to receive the string.
-	    if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-	      wstring headerBuffer(dwSize / sizeof(wchar_t), 0);
-	      if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, headerBuffer.data(), &headerSize, WINHTTP_NO_HEADER_INDEX)) {
-		string headers = to_utf8(headerBuffer);
-		if (!callback.handleHeaderChunk(headers.size(), headers.data())) {
-		  terminate = true;
-		}
+	  string tmp3 = "got header size: " + to_string(headerSize) + "\n";
+	  OutputDebugStringA(tmp3.c_str());
+	  // Allocate buffer by header length
+	  // If the function fails and ERROR_INSUFFICIENT_BUFFER is returned, lpdwBufferLength specifies the number of bytes that the application must allocate to receive the string.
+	  if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+	    wstring headerBuffer(headerSize / sizeof(wchar_t), 0);
+	    if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, headerBuffer.data(), &headerSize, WINHTTP_NO_HEADER_INDEX)) {
+	      string headers = to_utf8(headerBuffer);
+	      OutputDebugStringA(headers.c_str());
+	      if (!callback.handleHeaderChunk(headers.size(), headers.data())) {
+		terminate = true;
 	      }
+	    } else {
+	      string tmp4 = "Failed to get headers: " + to_string(GetLastError()) + "\n";
+	      OutputDebugStringA(tmp4.c_str());
 	    }
+	  } else {
+	    OutputDebugStringA("Failed to get headers\n");
 	  }
-
+	  
 	  while (!terminate) {
 	    // Check for available data to get data size in bytes
-	    dwSize = 0;
+	    DWORD dwSize = 0;
 	    if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) {
 	      break;
 	    }

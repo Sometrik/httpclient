@@ -14,7 +14,7 @@ class HTTPClientInterface {
   virtual bool handleChunk(size_t len, const char * chunk) = 0;
   virtual void handleDisconnect() { }
   virtual bool onIdle() { return true; }
-
+  
   virtual bool handleHeaderChunk(size_t len, const char * chunk) {      
     std::string input0(chunk, len);
 
