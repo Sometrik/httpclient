@@ -62,15 +62,31 @@ class WinHTTPClient : public HTTPClient {
   WinHTTPClient(const std::string & user_agent, bool enable_cookies = true, bool enable_keepalive = true)
     : HTTPClient(user_agent, enable_cookies, enable_keepalive)
   {
+    auto ua_text = from_utf8(getUserAgent());
+    // Use WinHttpOpen to obtain a session handle.
+    session_ = WinHttpOpen(ua_text.c_str(),
+			   WINHTTP_ACCESS_TYPE_NO_PROXY,
+			   WINHTTP_NO_PROXY_NAME,
+			   WINHTTP_NO_PROXY_BYPASS, 0);
+
+    DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_ALL;
+    WinHttpSetOption(session_, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
+    DWORD protocols = WINHTTP_PROTOCOL_FLAG_HTTP2;
+    WinHttpSetOption(session_, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL, &protocols, sizeof(protocols));
+    DWORD secure_protocols = WINHTTP_FLAG_SECURE_PROTOCOL_ALL;
+    WinHttpSetOption(session_, WINHTTP_OPTION_SECURE_PROTOCOLS, &secure_protocols, sizeof(secure_protocols));
+
+    // WINHTTP_OPTION_SECURITY_FLAGS => ignore weak security
+    // WINHTTP_OPTION_TLS_PROTOCOL_INSECURE_FALLBACK => use old protocol
   }
 
   ~WinHTTPClient() {
+    WinHttpCloseHandle(session_);
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
     URI uri(req.getURI());
     
-    auto ua_text = from_utf8(getUserAgent());
     auto target_scheme = uri.getScheme();
     auto target_host = from_utf8(uri.getDomain());
     auto target_port = uri.getPort();
@@ -88,129 +104,142 @@ class WinHTTPClient : public HTTPClient {
       }
     }
         
-    // Use WinHttpOpen to obtain a session handle.
-    auto hSession = WinHttpOpen(ua_text.c_str(),
-				WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-				WINHTTP_NO_PROXY_NAME,
-				WINHTTP_NO_PROXY_BYPASS, 0);
-    if (hSession) {
-      // Specify an HTTP server.
-      auto hConnect = WinHttpConnect(hSession, target_host.c_str(), target_port, 0);
-      if (hConnect) {
-	wstring request_type;
-	bool has_data = true;
-	switch (req.getType()) {
-	case HTTPRequest::GET:
-	  request_type = L"GET";
-	  has_data = false;
-	  break;
-	case HTTPRequest::POST:
-	  request_type = L"POST";
-	  break;
-	case HTTPRequest::OPTIONS:
-	  request_type = L"OPTIONS";
-	  break;
-	}    
+    auto hConnect = WinHttpConnect(hSession, target_host.c_str(), target_port, 0);
+    if (hConnect) {
+      DWORD disabled_features = 0;
+      if (!req.getFollowLocation()) disabled_features |= WINHTTP_DISABLE_REDIRECTS;
+      if (!enable_keepalive) disabled_features |= WINHTTP_DISABLE_KEEP_ALIVE;
+      if (!enable_cookies) disabled_features |= WINHTTP_DISABLE_COOKIES;
+      WinHttpSetOption(session_, WINHTTP_OPTION_DISABLE_FEATURE, &disabled_features, sizeof(disabled_features));
 
-	DWORD dwFlags = WINHTTP_FLAG_ESCAPE_DISABLE | WINHTTP_FLAG_ESCAPE_DISABLE_QUERY;
-	if (is_secure) dwFlags |= WINHTTP_FLAG_SECURE;
+      // WINHTTP_OPTION_CONNECT_TIMEOUT (ms)
+      // WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT (ms)
+      // WINHTTP_OPTION_RECEIVE_TIMEOUT (ms)
+      // WINHTTP_OPTION_RESOLVE_TIMEOUT (ms)
+      // WINHTTP_OPTION_SEND_TIMEOUT (ms)
+      
+      wstring request_type;
+      bool has_data = true;
+      switch (req.getType()) {
+      case HTTPRequest::GET:
+	request_type = L"GET";
+	has_data = false;
+	break;
+      case HTTPRequest::POST:
+	request_type = L"POST";
+	break;
+      case HTTPRequest::OPTIONS:
+	request_type = L"OPTIONS";
+	break;
+      }    
+
+      DWORD dwFlags = WINHTTP_FLAG_ESCAPE_DISABLE | WINHTTP_FLAG_ESCAPE_DISABLE_QUERY;
+      if (is_secure) dwFlags |= WINHTTP_FLAG_SECURE;
 	  
-	auto hRequest = WinHttpOpenRequest(hConnect, request_type.c_str(), target_path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlags);
-	if (hRequest) {
-	  map<string, string> combined_headers;
-	  for (auto & hd : default_headers) {
-	    combined_headers[hd.first] = hd.second;      
-	  }
-	  for (auto & hd : req.getHeaders()) {
-	    combined_headers[hd.first] = hd.second;
-	  }
-	  
-	  if (req.getType() == HTTPRequest::POST) {
-	    if (!req.getContentType().empty()) {
-	      combined_headers["Content-Type"] = req.getContentType();
-	    }
-	  }
-
-	  for (auto & [ name, value ] : combined_headers) {
-	    auto header = from_utf8(name + ": " + value + "\r\n");
-	    WinHttpAddRequestHeaders(hRequest, header.c_str(), -1, WINHTTP_ADDREQ_FLAG_REPLACE | WINHTTP_ADDREQ_FLAG_ADD);
-	  }
-	  
-	  DWORD dwSize = 0;
-
-	  if (has_data) {
-	    dwSize = req.getContent().size();
-	  }
-	  
-	  if (WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, dwSize, 0) &&
-	      (!has_data || WinHttpWriteData(hRequest, req.getContent().data(), dwSize, NULL)) &&
-	      WinHttpReceiveResponse(hRequest, NULL)
-	      ) {
-	    
-	    DWORD headerSize = 0;
-
-	    DWORD dwStatusCode = 0;
-	    DWORD dwSize = sizeof(dwStatusCode);
-	    
-	    if (WinHttpQueryHeaders(hRequest, 
-				    WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, 
-				    WINHTTP_HEADER_NAME_BY_INDEX, 
-				    &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
-	      callback.handleResultCode(dwStatusCode);
-	    }
-	    
-	    if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX)) {
-	      // Allocate buffer by header length
-	      // If the function fails and ERROR_INSUFFICIENT_BUFFER is returned, lpdwBufferLength specifies the number of bytes that the application must allocate to receive the string.
-	      if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-		unique_ptr<wchar_t[]> lpHeadBuffer(new wchar_t[dwSize / sizeof(wchar_t)]);
-		if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, lpHeadBuffer.get(), &headerSize, WINHTTP_NO_HEADER_INDEX)) {
-
-  		}	
-	      }
-	    }
-
-	    while ( 1 ) {
-	      // Check for available data to get data size in bytes
-	      dwSize = 0;
-	      if (!WinHttpQueryDataAvailable(hRequest, &dwSize)){
-                break;
-	      }
-	      if (!dwSize) {
-                break;  //data size 0          
-	      }
-
-	      // Allocate buffer by data size
-	      unique_ptr<char[]> outBuffer(new char[dwSize + 1]);	     
-	      // Read data from server
-	      DWORD dwDownloaded = 0;
-	      if (WinHttpReadData(hRequest, outBuffer.get(), dwSize, &dwDownloaded)) {
-		bool r = callback.handleChunk(dwDownloaded, outBuffer.get());
-		if (!r) break;
-	      } else {
-		break;
-	      }
-
-	      if (!dwDownloaded) break;
-	    }
-	    
-	    callback.handleDisconnect();
-	  }
-	  
-	  WinHttpCloseHandle(hRequest);
+      auto hRequest = WinHttpOpenRequest(hConnect, request_type.c_str(), target_path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlags);
+      if (hRequest) {
+	map<string, string> combined_headers;
+	for (auto & hd : default_headers) {
+	  combined_headers[hd.first] = hd.second;      
 	}
-	WinHttpCloseHandle(hConnect);
+	for (auto & hd : req.getHeaders()) {
+	  combined_headers[hd.first] = hd.second;
+	}
+	  
+	if (req.getType() == HTTPRequest::POST || req.getType() == HTTPRequest::OPTIONS) {
+	  if (!req.getContentType().empty()) {
+	    combined_headers["Content-Type"] = req.getContentType();
+	  }
+	}
+
+	const BasicAuth * basic = dynamic_cast<const BasicAuth *>(&auth);
+	if (basic) {
+	  // FIXME: implement
+	} else {
+	  string auth_header = auth.createHeader();
+	  if (!auth_header.empty()) {
+	    combined_headers[auth.getHeaderName()] = auth_header;
+	  }
+	}
+
+	for (auto & [ name, value ] : combined_headers) {
+	  auto header = from_utf8(name + ": " + value + "\r\n");
+	  WinHttpAddRequestHeaders(hRequest, header.c_str(), -1, WINHTTP_ADDREQ_FLAG_REPLACE | WINHTTP_ADDREQ_FLAG_ADD);
+	}
+	  
+	auto & outData = req.getContent();
+	
+	if (WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, postData.data(), postData.size(), postData.size(), 0) &&
+	    (!has_data || WinHttpWriteData(hRequest, req.getContent().data(), dwSize, NULL)) &&
+	    WinHttpReceiveResponse(hRequest, NULL)
+	    ) {
+	    
+	  DWORD headerSize = 0;
+
+	  DWORD dwStatusCode = 0;
+	  DWORD dwSize = sizeof(dwStatusCode);
+	    
+	  if (WinHttpQueryHeaders(hRequest, 
+				  WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, 
+				  WINHTTP_HEADER_NAME_BY_INDEX, 
+				  &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
+	    callback.handleResultCode(dwStatusCode);
+	  }
+	    
+	  if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX)) {
+	    // Allocate buffer by header length
+	    // If the function fails and ERROR_INSUFFICIENT_BUFFER is returned, lpdwBufferLength specifies the number of bytes that the application must allocate to receive the string.
+	    if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+	      unique_ptr<wchar_t[]> headerBuffer(new wchar_t[dwSize / sizeof(wchar_t)]);
+	      if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, headerBuffer.get(), &headerSize, WINHTTP_NO_HEADER_INDEX)) {
+		string headers = to_utf8(headerBuffer);
+		if (!callback.handleHeaderChunk(headers.size(), headers.data())) {
+		  break;
+		}
+	      }	
+	    }
+	  }
+
+	  while ( 1 ) {
+	    // Check for available data to get data size in bytes
+	    dwSize = 0;
+	    if (!WinHttpQueryDataAvailable(hRequest, &dwSize)){
+	      break;
+	    }
+	    if (!dwSize) {
+	      break;  //data size 0          
+	    }
+
+	    // Allocate buffer by data size
+	    unique_ptr<char[]> outBuffer(new char[dwSize + 1]);	     
+	    // Read data from server
+	    DWORD dwDownloaded = 0;
+	    if (WinHttpReadData(hRequest, outBuffer.get(), dwSize, &dwDownloaded)) {
+	      bool r = callback.handleChunk(dwDownloaded, outBuffer.get());
+	      if (!r) break;
+	    } else {
+	      break;
+	    }
+
+	    if (!dwDownloaded) break;
+	    if (!callback.onIdle()) break;
+	  }
+	    
+	  callback.handleDisconnect();
+	}
+	  
+	WinHttpCloseHandle(hRequest);
       }
-      WinHttpCloseHandle(hSession);
+      WinHttpCloseHandle(hConnect);
     }
   }
   
   void clearCookies() override {
   }
   
- protected:
- 
- };
+protected:
+  HINTERNET session_;
+};
   
 
 std::unique_ptr<HTTPClient>
