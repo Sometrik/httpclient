@@ -97,7 +97,7 @@ class CurlClient : public HTTPClient {
     // }
 
     struct curl_slist * headers = 0;
-    if (req.getType() == HTTPRequest::POST) {
+    if (req.getType() == HTTPRequest::POST || req.getType() == HTTPRequest::OPTIONS) {
       if (!req.getContentType().empty()) {
 	string h = "Content-type: ";
 	h += req.getContentType();
@@ -283,32 +283,8 @@ CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) 
   if (buffer) {
     HTTPClientInterface * callback = context->callback;
 
-    string input((const char*)buffer, s);
-
-    if (input.compare(0, 5, "HTTP/") == 0) {
-      auto pos1 = input.find_first_of(' ');
-      if (pos1 != string::npos) {
-	auto pos2 = input.find_first_of(' ', pos1 + 1);
-	if (pos2 != string::npos) {
-	  auto s2 = input.substr(pos1, pos2 - pos1);
-	  int code = atoi(s2.c_str());
-	  callback->handleResultCode(code);
-	}
-      }
-    } else {
-      int pos1 = 0;
-      for ( ; pos1 < input.size() && input[pos1] != ':'; pos1++) { }
-      int pos2 = input[pos1] == ':' ? pos1 + 1 : pos1;
-      for (; pos2 < input.size() && isspace(input[pos2]); pos2++) { }
-      int pos3 = input.size();
-      for (; pos3 > 0 && isspace(input[pos3 - 1]); pos3--) { }
-      std::string key = input.substr(0, pos1);
-      std::string value = input.substr(pos2, pos3 - pos2);
-      
-      if (strcasecmp(key.c_str(), "location") == 0 && !callback->handleRedirectUrl(value)) {
-	keep_running = false;
-      }      
-      callback->handleHeader(key, value);
+    if (!callback->handleHeaderChunk(s, (const char *)buffer)) {
+      keep_running = false;
     }
   }
 
