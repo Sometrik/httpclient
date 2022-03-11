@@ -81,10 +81,16 @@ class WinHTTPClient : public HTTPClient {
    }
 
   ~WinHTTPClient() {
-    WinHttpCloseHandle(session_);
+    if (session_) {
+      WinHttpCloseHandle(session_);
+    }
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
+    if (!session_) {
+      callback.handleErrorText("Not initialized");
+      return;
+    }
     URI uri(req.getURI());
     
     auto target_scheme = uri.getScheme();
@@ -107,10 +113,9 @@ class WinHTTPClient : public HTTPClient {
     }
         
     auto hConnect = WinHttpConnect(session_, target_host.c_str(), target_port, 0);
-    if (hConnect) {    
-      string tmp0 = "created handle for host: " + uri.getDomain() + ", port: " + to_string(target_port) + "\n";
-      OutputDebugStringA(tmp0.c_str());
-
+    if (!hConnect) {
+      callback.handleErrorText("Could not create connection handle: " + to_string(GetLastError()));
+    } else {      
       // WINHTTP_OPTION_CONNECT_TIMEOUT (ms)
       // WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT (ms)
       // WINHTTP_OPTION_RECEIVE_TIMEOUT (ms)
@@ -136,15 +141,16 @@ class WinHTTPClient : public HTTPClient {
       if (is_secure) dwFlags |= WINHTTP_FLAG_SECURE;
 	  
       auto hRequest = WinHttpOpenRequest(hConnect, request_type.c_str(), target_path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, dwFlags);
-      if (hRequest) {
+      if (!hRequest) {
+	callback.handleErrorText("Could not create request: " + to_string(GetLastError()));
+      } else {
 	DWORD disabled_features = 0;
 	if (!req.getFollowLocation()) disabled_features |= WINHTTP_DISABLE_REDIRECTS;
 	if (!enable_keepalive) disabled_features |= WINHTTP_DISABLE_KEEP_ALIVE;
 	if (!enable_cookies) disabled_features |= WINHTTP_DISABLE_COOKIES;
-	WinHttpSetOption(hRequest, WINHTTP_OPTION_DISABLE_FEATURE, &disabled_features, sizeof(disabled_features));
-
-	string tmp2 = "created request, path: " + target_path0 + "\n";
-	OutputDebugStringA(tmp2.c_str());
+	if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_DISABLE_FEATURE, &disabled_features, sizeof(disabled_features))) {
+	  OutputDebugStringA("Could not set options");
+	}
 
 	map<string, string> combined_headers;
 	for (auto & hd : default_headers) {
@@ -185,40 +191,23 @@ class WinHTTPClient : public HTTPClient {
 
 	bool req_r = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (void*)postData.data(), postData.size(), postData.size(), 0);
 
-	if (is_secure && !req_r) {
+	if (is_secure && !req_r && GetLastError() == 12175) {
 	  OutputDebugStringA("Retrying request\n");
 	  DWORD security_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID | SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE | SECURITY_FLAG_IGNORE_ALL_CERT_ERRORS;
 	  WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &security_flags, sizeof(security_flags));
 	  req_r = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (void*)postData.data(), postData.size(), postData.size(), 0);
 	}
 
-	if (req_r && WinHttpReceiveResponse(hRequest, NULL)) {
+	if (!req_r) {
+	  callback.handleErrorText("Could not send request: " + to_string(GetLastError()));
+	} else if (WinHttpReceiveResponse(hRequest, NULL)) {
 	  OutputDebugStringA("Received response\n");
 
 	  bool terminate = false;
 
-#if 0
-	  DWORD dwStatusCode = 0;
-	  DWORD dwSize = sizeof(dwStatusCode);
-
-	  if (WinHttpQueryHeaders(hRequest,
-	    WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-	    WINHTTP_HEADER_NAME_BY_INDEX,
-	    &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX)) {
-	    string tmp3 = "got result code: " + to_string(dwStatusCode) + "\n";
-	    OutputDebugStringA(tmp3.c_str());
-	    callback.handleResultCode(dwStatusCode);
-	  }
-	  else {
-	    string tmp3 = "failed to get response code: " + to_string(GetLastError());
-	    OutputDebugStringA(tmp3.c_str());
-	  }
-#endif
 	  DWORD headerSize = 0;
 	  WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, NULL, &headerSize, WINHTTP_NO_HEADER_INDEX);
 
-	  string tmp3 = "got header size: " + to_string(headerSize) + "\n";
-	  OutputDebugStringA(tmp3.c_str());
 	  // Allocate buffer by header length
 	  // If the function fails and ERROR_INSUFFICIENT_BUFFER is returned, lpdwBufferLength specifies the number of bytes that the application must allocate to receive the string.
 	  if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
@@ -230,11 +219,12 @@ class WinHTTPClient : public HTTPClient {
 		terminate = true;
 	      }
 	    } else {
-	      string tmp4 = "Failed to get headers: " + to_string(GetLastError()) + "\n";
-	      OutputDebugStringA(tmp4.c_str());
+	      callback.handleErrorText("Failed to get headers: " + to_string(GetLastError()));
+	      terminate = true;
 	    }
 	  } else {
-	    OutputDebugStringA("Failed to get headers\n");
+	    callback.handleErrorText("Failed to get headers: no headers");
+	    terminate = true;
 	  }
 	  
 	  while (!terminate) {
@@ -265,8 +255,7 @@ class WinHTTPClient : public HTTPClient {
 
 	  callback.handleDisconnect();
 	} else {
-	  string tmp3 = "connection failed: " + to_string(GetLastError()) + "\n";
-	  OutputDebugStringA(tmp3.c_str());	  
+	  callback.handleErrorText("Failed to receive response: " + to_string(GetLastError()));
 	}
 	  
 	WinHttpCloseHandle(hRequest);
