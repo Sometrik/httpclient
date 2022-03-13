@@ -169,15 +169,19 @@ class WinHTTPClient : public HTTPClient {
      DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_ALL;
      WinHttpSetOption(session_, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
 
-#if 1
      DWORD protocols = WINHTTP_PROTOCOL_FLAG_HTTP2;
      WinHttpSetOption(session_, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL, &protocols, sizeof(protocols));
-     DWORD secure_protocols = WINHTTP_FLAG_SECURE_PROTOCOL_ALL | 0xa00;
+     DWORD secure_protocols = WINHTTP_FLAG_SECURE_PROTOCOL_ALL | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1;
+     if (IsWindows10OrGreater()) {
+       secure_protocols |= WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
+     }
      if (!WinHttpSetOption(session_, WINHTTP_OPTION_SECURE_PROTOCOLS, &secure_protocols, sizeof(secure_protocols))) {
        string tmp = "failed to set secure protocols: " + to_string(GetLastError()) + "\r\n";
        OutputDebugStringA(tmp.c_str());
      }
-#endif
+
+     DWORD fallback = 1;
+     WinHttpSetOption(session_, WINHTTP_OPTION_TLS_PROTOCOL_INSECURE_FALLBACK, &fallback, sizeof(fallback));     
    }
 
   ~WinHTTPClient() {
