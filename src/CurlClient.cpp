@@ -35,6 +35,48 @@ static CURLSH * share;
 static pthread_mutex_t *share_lockarray;
 #endif
 
+struct log_context_s {
+  std::string log;
+};
+  
+static int my_trace(CURL *handle, curl_infotype type, char *data, size_t size, void *userp) {
+  auto context = reinterpret_cast<log_context_s*>(userp);
+
+  std::string text;
+  
+  switch(type) {
+  case CURLINFO_TEXT:
+    text = string("== Info: ") + data;
+    break;
+  case CURLINFO_HEADER_OUT:
+    text = "=> Send header\n";
+    break;
+  case CURLINFO_DATA_OUT:
+    text = "=> Send data\n";
+    break;
+  case CURLINFO_SSL_DATA_OUT:
+    text = "=> Send SSL data\n";
+    break;
+  case CURLINFO_HEADER_IN:
+    text = "<= Recv header\n";
+    break;
+  case CURLINFO_DATA_IN:
+    text = "<= Recv data\n";
+    break;
+  case CURLINFO_SSL_DATA_IN:
+    text = "<= Recv SSL data\n";
+    break;
+  default: /* in case a new one is introduced to shock us */
+    return 0;
+  }
+
+  context->log += text;
+  
+  // dump(text, stderr, (unsigned char *)data, size, config->trace_ascii);
+  
+  return 0;
+}
+
 class CurlClient;
 
 struct curl_context_s {
@@ -80,6 +122,8 @@ class CurlClient : public HTTPClient {
   }
 
   void request(const HTTPRequest & req, const Authorization & auth, HTTPClientInterface & callback) override {
+    log_context_s log_context;
+    
 #if 0
     if (req.getURI().empty()) {
       return HTTPResponse(0, "empty URI");
@@ -159,6 +203,10 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, req.getFollowLocation() ? 1 : 0);
     curl_easy_setopt(curl, CURLOPT_URL, req.getURI().c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, my_trace);
+    curl_easy_setopt(curl, CURLOPT_DEBUGDATA, &log_context);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     // cerr << "setting connect timeout " << req.getConnectTimeout() << ", read timeout " << req.getReadTimeout() << ", connection timeout = " << req.getConnectionTimeout() << endl;
@@ -186,6 +234,7 @@ class CurlClient : public HTTPClient {
     }
     
     callback.handleDisconnect();
+    callback.handleLogText(log_context.log);
     
     if (headers) {
       curl_easy_setopt(curl, CURLOPT_HTTPHEADER, 0);

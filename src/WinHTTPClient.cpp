@@ -39,22 +39,98 @@ static string to_utf8(const wstring & s) {
   return string(tmp.get(), static_cast<size_t>(r));  
 }
 
-static long long get_current_time_ms() {
-#ifdef WIN32
-  FILETIME ft_now;
-  GetSystemTimeAsFileTime(&ft_now);
-  long long ll_now = (LONGLONG)ft_now.dwLowDateTime + (((LONGLONG)ft_now.dwHighDateTime) << 32LL);
-  ll_now /= 10000;
-  return ll_now - 116444736000000000LL;
-#else
-  struct timeval tv;
-  int r = gettimeofday(&tv, 0);
-  if (r == 0) {
-    return (long long)1000 * tv.tv_sec + tv.tv_usec / 1000;
-  } else {
-    return 0;
+struct winhttp_context_s {
+  // mutex
+  std::string log;
+};
+
+static void __stdcall winhttp_status_callback(HINTERNET handle,
+					      DWORD_PTR context,
+					      DWORD status,
+					      void* info,
+					      DWORD info_len) {
+
+  auto * context = reinterpret_cast<winhttp_status_context_s*>(context);
+  
+  std::string status_string, info_string;
+ 
+  switch (status) {
+  case WINHTTP_CALLBACK_STATUS_HANDLE_CREATED:
+    status_string = "handle created";
+    break;
+  case WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING:
+    status_string = "handle closing";
+    break;
+  case WINHTTP_CALLBACK_STATUS_RESOLVING_NAME:
+    status_string = "resolving";
+    info_string = to_utf8(wstring(static_cast<wchar_t*>(info), info_len / sizeof(wchar_t)));
+    break;
+  case WINHTTP_CALLBACK_STATUS_NAME_RESOLVED:
+    status_string = "resolved";
+    break;
+  case WINHTTP_CALLBACK_STATUS_CONNECTING_TO_SERVER:
+    status_string = "connecting";
+    info_string = to_utf8(wstring(static_cast<wchar_t*>(info), info_len / sizeof(wchar_t)));
+    break;
+  case WINHTTP_CALLBACK_STATUS_CONNECTED_TO_SERVER:
+    status_string = "connected";
+    break;
+  case WINHTTP_CALLBACK_STATUS_SENDING_REQUEST:
+    status_string = "sending";
+    break;
+  case WINHTTP_CALLBACK_STATUS_REQUEST_SENT:
+    status_string = "sent";
+    break;
+  case WINHTTP_CALLBACK_STATUS_RECEIVING_RESPONSE:
+    status_string = "receiving response";
+    break;
+  case WINHTTP_CALLBACK_STATUS_RESPONSE_RECEIVED:
+    status_string = "response received";
+    break;
+  case WINHTTP_CALLBACK_STATUS_CLOSING_CONNECTION:
+    status_string = "connection closing";
+    break;
+  case WINHTTP_CALLBACK_STATUS_CONNECTION_CLOSED:
+    status_string = "connection closed";
+    break;
+  case WINHTTP_CALLBACK_STATUS_REDIRECT:
+    status_string = "redirect";
+    info_string = to_utf8(wstring(static_cast<wchar_t*>(info), info_len / sizeof(wchar_t)));
+    break;
+  case WINHTTP_CALLBACK_STATUS_DATA_AVAILABLE:
+    status_string = "data available";
+    info_string = to_string(*static_cast<uint32_t*>(info));
+    break;
+  case WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE:
+    status_string = "headers available";
+    break;
+  case WINHTTP_CALLBACK_STATUS_READ_COMPLETE:
+    status_string = "read complete";
+    info_string = to_string(info_len);
+    break;
+  case WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE:
+    status_string = "send request complete";
+    break;
+  case WINHTTP_CALLBACK_STATUS_WRITE_COMPLETE:
+    status_string = "write complete";
+    break;
+  case WINHTTP_CALLBACK_STATUS_REQUEST_ERROR:
+    status_string = "request error";
+    break;
+  case WINHTTP_CALLBACK_STATUS_SECURE_FAILURE:
+    status_string = "https failure";
+    info_string = to_string(*static_cast<uint32_t*>(info));
+    break;
+  default:
+    break;
   }
-#endif
+
+  std::string msg;
+  if (!status_string.empty()) msg += "status=" + status_string;
+  else msg += "status=" + to_string(status);
+  if (!info_string.empty()) msg += ", info=" + info_string;
+  
+  context->log += msg + "\r\n";
 }
 
 class WinHTTPClient : public HTTPClient {
@@ -91,6 +167,9 @@ class WinHTTPClient : public HTTPClient {
       callback.handleErrorText("Not initialized");
       return;
     }
+
+    winhttp_status_contest_s context;
+
     URI uri(req.getURI());
     
     auto target_scheme = uri.getScheme();
@@ -144,6 +223,14 @@ class WinHTTPClient : public HTTPClient {
       if (!hRequest) {
 	callback.handleErrorText("Could not create request: " + to_string(GetLastError()));
       } else {
+	if (!WinHttpSetStatusCallback(hRequest, &winhttp_status_callback, WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, 0)) {
+	  OutputDebugStringA("Could not set callback");	  
+	}
+
+	if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_CONTEXT_VALUE, &context)) {
+	  OutputDebugStringA("Failed to set context");
+	}
+	
 	DWORD disabled_features = 0;
 	if (!req.getFollowLocation()) disabled_features |= WINHTTP_DISABLE_REDIRECTS;
 	if (!enable_keepalive) disabled_features |= WINHTTP_DISABLE_KEEP_ALIVE;
@@ -262,6 +349,8 @@ class WinHTTPClient : public HTTPClient {
       }
       WinHttpCloseHandle(hConnect);
     }
+
+    callback.handleLogText(context.log);
   }
   
   void clearCookies() override {
