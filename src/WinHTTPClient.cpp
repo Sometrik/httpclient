@@ -18,21 +18,22 @@
 #include <URI.h>
 #include <winhttp.h>
 #include <mutex>
+#include <VersionHelpers.h>
 
 using namespace std;
 
-static wstring from_utf8(const std::string & s) {
+static inline wstring from_utf8(const std::string & s) {
   std::unique_ptr<wchar_t[]> tmp(new wchar_t[s.size() + 1]);
-  auto r = MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, tmp.get(), s.size() + 1);
+  auto r = MultiByteToWideChar(CP_UTF8, 0, s.data(), s.size(), tmp.get(), s.size() + 1);
   return wstring(tmp.get(), static_cast<size_t>(r));
 }
 
-static string to_utf8(const wstring & s) {
+static inline string to_utf8(const wstring & s) {
   std::unique_ptr<char[]> tmp(new char[4 * s.size() + 1]);
   auto r = WideCharToMultiByte(CP_UTF8,
 			       0,
 			       s.data(),
-			       -1,
+			       s.size(),
 			       tmp.get(),
 			       4*s.size() + 1,
 			       NULL,
@@ -169,19 +170,23 @@ class WinHTTPClient : public HTTPClient {
      DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_ALL;
      WinHttpSetOption(session_, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
 
+#if 0
      DWORD protocols = WINHTTP_PROTOCOL_FLAG_HTTP2;
      WinHttpSetOption(session_, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL, &protocols, sizeof(protocols));
      DWORD secure_protocols = WINHTTP_FLAG_SECURE_PROTOCOL_ALL | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1;
-     if (IsWindows10OrGreater()) {
+     if (IsWindows10OrGreater() || 1) {
        secure_protocols |= WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
      }
      if (!WinHttpSetOption(session_, WINHTTP_OPTION_SECURE_PROTOCOLS, &secure_protocols, sizeof(secure_protocols))) {
        string tmp = "failed to set secure protocols: " + to_string(GetLastError()) + "\r\n";
        OutputDebugStringA(tmp.c_str());
      }
+#endif
 
+#ifdef WINHTTP_OPTION_TLS_PROTOCOL_INSECURE_FALLBACK
      DWORD fallback = 1;
      WinHttpSetOption(session_, WINHTTP_OPTION_TLS_PROTOCOL_INSECURE_FALLBACK, &fallback, sizeof(fallback));     
+#endif
    }
 
   ~WinHTTPClient() {
@@ -251,6 +256,7 @@ class WinHTTPClient : public HTTPClient {
       if (!hRequest) {
 	callback.handleErrorText("Could not create request: " + to_string(GetLastError()));
       } else {
+#ifdef USE_STATUS_CALLBACK
 	if (WinHttpSetStatusCallback(hRequest, &winhttp_status_callback, WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, 0) == WINHTTP_INVALID_STATUS_CALLBACK) {
 	  string tmp = "Could not set callback: " + to_string(GetLastError()) + "\n";
 	  OutputDebugStringA(tmp.c_str());
@@ -260,7 +266,8 @@ class WinHTTPClient : public HTTPClient {
 	if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_CONTEXT_VALUE, &context_ptr, sizeof(context_ptr))) {
 	  OutputDebugStringA("Failed to set context\n");
 	}
-	
+#endif
+
 	DWORD disabled_features = 0;
 	if (!req.getFollowLocation()) disabled_features |= WINHTTP_DISABLE_REDIRECTS;
 	if (!enable_keepalive) disabled_features |= WINHTTP_DISABLE_KEEP_ALIVE;
