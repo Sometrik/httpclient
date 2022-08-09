@@ -96,6 +96,7 @@ static bool never_convert_fragment(const std::string & domain) {
 
 static bool isValidScheme(const std::string & s) {
   for (unsigned int i = 0; i < s.size(); i++) {
+    auto c = s[i];
     if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')) {
       return false;
     }
