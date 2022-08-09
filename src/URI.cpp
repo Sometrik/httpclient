@@ -7,8 +7,9 @@
 #include <cassert>
 #include <cstring>
 
+#include <utf8proc.h>
+
 #include "FNV.h"
-#include "utf8.h"
 
 using namespace std;
 
@@ -45,33 +46,21 @@ static vector<string> split(const string & line, char delimiter) {
   return v;
 }
 
-static uint32_t toLower(uint32_t c) {
-  if (c <= 127) {
-    return (char)tolower((char)c);
-  } else if ((c >= 192 && c <= 214) || // Agrave to Ouml
-	     (c >= 216 && c <= 222) // Oslash to Thorn
-	     ) {
-    return c + 32;
-  } else if (c >= 0x0410 && c <= 0x042f) { // Cyrillic capitals
-    return c + 0x20;
-  } else {
-    return c;
-  }
-}
-
 static string toLower(const string & input) {
-  string r;
-  r.reserve(input.size());
-
-  const char * str = input.c_str();
-  const char * str_i = str;
-  const char * end = str + input.size(); 
-
-  while ( str_i < end ) {
-    uint32_t c = utf8::next(str_i, end); // get 32 bit code of a utf-8 symbol
-    utf8::append(toLower(c), back_inserter(r));
+  utf8proc_uint8_t * dest;
+  utf8proc_option_t options = utf8proc_option_t(UTF8PROC_IGNORE | UTF8PROC_STRIPCC | UTF8PROC_CASEFOLD | UTF8PROC_COMPOSE);
+  auto s = utf8proc_map(reinterpret_cast<const unsigned char *>(input.c_str()),
+			static_cast<utf8proc_ssize_t>(input.size()),
+			&dest,
+			options
+			);
+  if (s >= 0) {
+    std::string r(reinterpret_cast<char *>(dest), s);
+    free(dest);
+    return r;
+  } else {
+    return "";
   }
-  return r;
 }
 
 URI::URI() : port(0), is_canonical(false) { // , http_status_code(0) {
@@ -107,8 +96,7 @@ static bool never_convert_fragment(const std::string & domain) {
 
 static bool isValidScheme(const std::string & s) {
   for (unsigned int i = 0; i < s.size(); i++) {
-    char c = tolower(s[i]);
-    if (!(c >= 'a' && c <= 'z')) {
+    if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')) {
       return false;
     }
   }
