@@ -19,7 +19,7 @@ class HTTPClientInterface {
   virtual bool onIdle() { return true; }
   
   virtual bool handleHeaderChunk(std::string_view input0) {
-    size_t pos0 = 0;
+    std::string_view::size_type pos0 = 0;
     while ( pos0 < input0.size() ) {
       auto pos = input0.find("\r\n", pos0);
       if (pos == std::string_view::npos) pos = input0.size();
@@ -30,7 +30,8 @@ class HTTPClientInterface {
       if (input.compare(0, 5, "HTTP/") == 0) {
 	auto pos1 = input.find_first_of(' ');
 	if (pos1 != std::string_view::npos) {
-	  auto pos2 = input.find_first_of(' ', pos1 + 1);
+	  pos1++;
+	  auto pos2 = input.find_first_of(' ', pos1);
 	  if (pos2 != std::string_view::npos) {
 	    auto s2 = input.substr(pos1, pos2 - pos1);
 	    int code = 0;
