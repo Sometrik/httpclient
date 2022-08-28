@@ -337,9 +337,9 @@ class WinHTTPClient : public HTTPClient {
 	  if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 	    wstring headerBuffer(headerSize / sizeof(wchar_t), 0);
 	    if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, headerBuffer.data(), &headerSize, WINHTTP_NO_HEADER_INDEX)) {
-	      string headers = to_utf8(headerBuffer);
+	      auto headers = to_utf8(headerBuffer);
 	      OutputDebugStringA(headers.c_str());
-	      if (!callback.handleHeaderChunk(headers.size(), headers.data())) {
+	      if (!callback.handleHeaderChunk(headers)) {
 		terminate = true;
 	      }
 	    } else {
@@ -366,7 +366,7 @@ class WinHTTPClient : public HTTPClient {
 	    // Read data from server
 	    DWORD dwDownloaded = 0;
 	    if (WinHttpReadData(hRequest, outBuffer.get(), dwSize, &dwDownloaded)) {
-	      bool r = callback.handleChunk(dwDownloaded, outBuffer.get());
+	      bool r = callback.handleChunk(std::string_view(outBuffer.get(), dwDownloaded));
 	      if (!r) break;
 	    }
 	    else {
@@ -387,7 +387,7 @@ class WinHTTPClient : public HTTPClient {
       WinHttpCloseHandle(hConnect);
     }
 
-    OutputDebugStringA("termianting\r\n");
+    OutputDebugStringA("terminating\r\n");
     context->log("terminating\r\n");
     callback.handleLogText(context->getLog());
   }

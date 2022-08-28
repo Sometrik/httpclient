@@ -21,17 +21,17 @@ class HTTPResponse : public HTTPClientInterface {
   const std::unordered_map<std::string, std::string> & getHeaders() const { return headers; }
 
   void handleResultCode(int code) override { result_code = code; }
-  void handleErrorText(std::string s) override { error_text = s; }
-  void handleLogText(std::string s) override { log_text = s; }
-  bool handleRedirectUrl(const std::string & url) override {
-    redirect_url = url;
+  void handleErrorText(std::string_view s) override { error_text = std::string(s); }
+  void handleLogText(std::string_view s) override { log_text = std::string(s); }
+  bool handleRedirectUrl(std::string_view url) override {
+    redirect_url = std::string(url);
     return true;
   }
-  void handleHeader(const std::string & key, const std::string & value) override {
-    headers[key] = value;
+  void handleHeader(std::string_view key, std::string_view value) override {
+    headers[std::string(key)] = std::string(value);
   }
-  bool handleChunk(size_t len, const char * chunk) override {
-    content += std::string(chunk, len);
+  bool handleChunk(std::string_view chunk) override {
+    content += chunk;
     return true;
   }
   

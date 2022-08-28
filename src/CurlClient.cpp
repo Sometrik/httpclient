@@ -312,27 +312,29 @@ CurlClient::write_data_func(void * buffer, size_t size, size_t nmemb, void * use
   size_t s = size * nmemb;
   // Content-Type: multipart/x-mixed-replace; boundary=myboundary
 
-  curl_context_s * context = (curl_context_s *)userp;
+  auto context = (curl_context_s *)userp;
   assert(context);
   context->prev_data_time = get_current_time_ms();
   
-  HTTPClientInterface * callback = context->callback;
+  auto callback = context->callback;
   assert(callback);
-  return callback->handleChunk(s, (const char *)buffer) ? s : 0;  
+  return callback->handleChunk(std::string_view(reinterpret_cast<char *>(buffer), s)) ? s : 0;  
 }
 
 size_t
 CurlClient::headers_func(void * buffer, size_t size, size_t nmemb, void *userp) {
-  curl_context_s * context = (curl_context_s *)userp;
+  auto context = (curl_context_s *)userp;
   assert(context);
   context->prev_data_time = get_current_time_ms();
   
   size_t s = size * nmemb;
   bool keep_running = true;
   if (buffer) {
-    HTTPClientInterface * callback = context->callback;
+    auto callback = context->callback;
 
-    if (!callback->handleHeaderChunk(s, (const char *)buffer)) {
+    auto v = std::string_view(reinterpret_cast<char *>(buffer), s);
+    
+    if (!callback->handleHeaderChunk(std::move(v))) {
       keep_running = false;
     }
   }
