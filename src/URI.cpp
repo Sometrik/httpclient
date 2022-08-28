@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
+#include <iterator>
 
 #include <utf8proc.h>
 
