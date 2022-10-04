@@ -44,7 +44,8 @@ class URI {
   void setQueryString(const std::map<std::string, std::string> & pairs);
 
   static std::string formatQueryString(const std::map<std::string, std::string> & data, bool encode_punctuation = true);
-
+  static std::string formatQueryString(const std::vector<std::pair<std::string, std::string>> & data, bool encode_punctuation = true);
+  
   std::string getReducedDomain() const;
   long long getDomainHash() const;
   long long getHash() const;

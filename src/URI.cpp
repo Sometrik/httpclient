@@ -310,11 +310,23 @@ URI::setQueryString(const map<string, string> & pairs, const list<string> & sing
 string
 URI::formatQueryString(const map<string, string> & data, bool encode_punctuation) {
   string r;
-  for (const auto & p : data) {
+  for (auto & [key, value] : data) {
     if (!r.empty()) r += '&';
-    r += urlencode(p.first, false, encode_punctuation);
+    r += urlencode(key, false, encode_punctuation);
     r += '=';
-    r += urlencode(p.second, false, encode_punctuation);
+    r += urlencode(value, false, encode_punctuation);
+  }
+  return r;
+}
+
+string
+URI::formatQueryString(const vector<pair<string, string>> & data, bool encode_punctuation) {
+  string r;
+  for (auto & [key, value] : data) {
+    if (!r.empty()) r += '&';
+    r += urlencode(key, false, encode_punctuation);
+    r += '=';
+    r += urlencode(value, false, encode_punctuation);
   }
   return r;
 }
