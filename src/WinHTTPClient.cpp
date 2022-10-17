@@ -7,14 +7,9 @@
 #include <cassert>
 #include <cctype>
 
-#if defined(WIN32) || defined(WIN64) 
-#include <windows.h>
-#include <sysinfoapi.h>
+// #include <windows.h>
+// #include <sysinfoapi.h>
 
-#define strcasecmp _stricmp
-#endif
-
-#include <iostream>
 #include <URI.h>
 #include <winhttp.h>
 #include <mutex>
