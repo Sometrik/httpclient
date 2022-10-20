@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cctype>
 
-// #include <windows.h>
+#include <windows.h>
 // #include <sysinfoapi.h>
 
 #include <URI.h>
