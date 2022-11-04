@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
-#include <iostream>
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CFNetwork/CFNetwork.h>
@@ -106,7 +105,7 @@ class iOSCFClient : public HTTPClient {
 
     if (enable_keepalive && persistentStream != 0) {
       if (persistentStreamDomain != uri.getDomain() || persistentStreamScheme != uri.getScheme()) {
-	cerr << "HTTPClient: closing persistent stream (target changed " << persistentStreamScheme << "://" << persistentStreamDomain << " to " << uri.getScheme() << "://" << uri.getDomain() << ")" << endl;
+	// cerr << "HTTPClient: closing persistent stream (target changed " << persistentStreamScheme << "://" << persistentStreamDomain << " to " << uri.getScheme() << "://" << uri.getDomain() << ")" << endl;
 	
 	CFReadStreamClose(persistentStream);
 	CFRelease(persistentStream);
@@ -116,7 +115,7 @@ class iOSCFClient : public HTTPClient {
         if (status == kCFStreamStatusNotOpen ||
             status == kCFStreamStatusClosed ||
             status == kCFStreamStatusError) {
-	  cerr << "HTTPClient: closing persistent stream (connection closed " << persistentStreamScheme << "://" << persistentStreamDomain << ")" << endl;
+	  // cerr << "HTTPClient: closing persistent stream (connection closed " << persistentStreamScheme << "://" << persistentStreamDomain << ")" << endl;
 	  
 	  CFReadStreamClose(persistentStream);
 	  CFRelease(persistentStream);
@@ -208,7 +207,7 @@ class iOSCFClient : public HTTPClient {
           terminate = true;
         }
       } else if (numBytesRead < 0) {
-	cerr << "HTTPClient: read error\n";
+	// cerr << "HTTPClient: read error\n";
         CFStreamError error = CFReadStreamGetError(readStream);
         terminate = true;
       } else {
@@ -225,7 +224,7 @@ class iOSCFClient : public HTTPClient {
 
     if (!enable_keepalive || !reuse_stream) {
       if (enable_keepalive) {
-	cerr << "HTTPClient: unable to reuse stream to " << uri.getScheme() << "://" << uri.getDomain() << endl;
+	// cerr << "HTTPClient: unable to reuse stream to " << uri.getScheme() << "://" << uri.getDomain() << endl;
       }
       CFReadStreamClose(readStream);
       CFRelease(readStream);
@@ -235,7 +234,7 @@ class iOSCFClient : public HTTPClient {
 	persistentStream = 0;
       }
     } else if (!persistentStream) {
-      cerr << "HTTPClient: trying to keep alive connection to " << uri.getScheme() << "://" << uri.getDomain() << endl;
+      // cerr << "HTTPClient: trying to keep alive connection to " << uri.getScheme() << "://" << uri.getDomain() << endl;
       persistentStream = readStream;
       persistentStreamScheme = uri.getScheme();
       persistentStreamDomain = uri.getDomain();
