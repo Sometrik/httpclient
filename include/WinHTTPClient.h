@@ -10,10 +10,6 @@ class WinHTTPClientFactory : public HTTPClientFactory {
 
   std::unique_ptr<HTTPClient> createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) override;
 
-#if 0
-  static void globalInit();
-  static void globalCleanup();
-#endif
 };
 
 #endif
