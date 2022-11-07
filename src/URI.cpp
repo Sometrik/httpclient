@@ -68,7 +68,7 @@ URI::URI() : port(0), is_canonical(false) { // , http_status_code(0) {
 
 }
 
-URI::URI(const string & value, bool _is_canonical) : port(0), is_canonical(_is_canonical) { //, http_status_code(0) {
+URI::URI(std::string_view value, bool _is_canonical) : port(0), is_canonical(_is_canonical) {
   parse(value);
 }
 
@@ -106,7 +106,7 @@ static bool isValidScheme(const std::string & s) {
 }
 
 void
-URI::parse(const string & value) {
+URI::parse(std::string_view value) {
   string s;
   if (value.find("\xc2\xad") != string::npos) {
     for (unsigned int i = 0; i < value.size(); i++) {

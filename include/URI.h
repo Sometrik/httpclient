@@ -1,6 +1,7 @@
 #ifndef _URI_H_
 #define _URI_H_
 
+#include <string_view>
 #include <string>
 #include <map>
 #include <list>
@@ -9,9 +10,9 @@
 class URI {
  public:
   URI();
-  URI(const std::string & value, bool _is_canonical = false);
+  URI(std::string_view value, bool _is_canonical = false);
 
-  void parse(const std::string & v);
+  void parse(std::string_view v);
 
   void setScheme(const std::string & _scheme) { scheme = _scheme; }
   void setDomain(const std::string & _domain) { domain = _domain; }
