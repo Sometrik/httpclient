@@ -161,15 +161,6 @@ class WinHTTPClient : public HTTPClient {
        WINHTTP_ACCESS_TYPE_NO_PROXY,
        WINHTTP_NO_PROXY_NAME,
        WINHTTP_NO_PROXY_BYPASS, 0);
-
-     if (!WinHttpSetTimeouts(session_,
-			     0, // nResolveTimeout
-			     req.getConnectTimeout() * 1000,  // nConnectTimeouut
-			     240000, // nSendTimeout,
-			     req.getReadTimeout() * 1000 // nReceiveTimeout
-			     )) {
-       // failed to set timeouts
-     }
      
      DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_ALL;
      WinHttpSetOption(session_, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
@@ -226,12 +217,12 @@ class WinHTTPClient : public HTTPClient {
       is_secure = true;
     } else {
       return;
-    }
-        
+    }       
+
     auto hConnect = WinHttpConnect(session_, target_host.c_str(), target_port, 0);
     if (!hConnect) {
       callback.handleErrorText("Could not create connection handle: " + to_string(GetLastError()));
-    } else {      
+    } else {
       // WINHTTP_OPTION_CONNECT_TIMEOUT (ms)
       // WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT (ms)
       // WINHTTP_OPTION_RECEIVE_TIMEOUT (ms)
@@ -260,6 +251,15 @@ class WinHTTPClient : public HTTPClient {
       if (!hRequest) {
 	callback.handleErrorText("Could not create request: " + to_string(GetLastError()));
       } else {
+	if (!WinHttpSetTimeouts(hRequest,
+			        0, // nResolveTimeout
+				req.getConnectTimeout() * 1000,  // nConnectTimeouut
+				240000, // nSendTimeout,
+				req.getReadTimeout() * 1000 // nReceiveTimeout
+	)) {
+	  // failed to set timeouts
+	}
+
 #ifdef USE_STATUS_CALLBACK
 	if (WinHttpSetStatusCallback(hRequest, &winhttp_status_callback, WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, 0) == WINHTTP_INVALID_STATUS_CALLBACK) {
 	  string tmp = "Could not set callback: " + to_string(GetLastError()) + "\n";
