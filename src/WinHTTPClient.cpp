@@ -162,6 +162,15 @@ class WinHTTPClient : public HTTPClient {
        WINHTTP_NO_PROXY_NAME,
        WINHTTP_NO_PROXY_BYPASS, 0);
 
+     if (!WinHttpSetTimeouts(session_,
+			     0, // nResolveTimeout
+			     req.getConnectTimeout() * 1000,  // nConnectTimeouut
+			     240000, // nSendTimeout,
+			     req.getReadTimeout() * 1000 // nReceiveTimeout
+			     )) {
+       // failed to set timeouts
+     }
+     
      DWORD decompression = WINHTTP_DECOMPRESSION_FLAG_ALL;
      WinHttpSetOption(session_, WINHTTP_OPTION_DECOMPRESSION, &decompression, sizeof(decompression));
 
