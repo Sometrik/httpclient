@@ -152,8 +152,8 @@ static void __stdcall winhttp_status_callback(HINTERNET handle,
 
 class WinHTTPClient : public HTTPClient {
  public:
-   WinHTTPClient(const std::string& user_agent, bool enable_cookies = true, bool enable_keepalive = true)
-     : HTTPClient(user_agent, enable_cookies, enable_keepalive)
+   WinHTTPClient(std::string user_agent, bool enable_cookies = true, bool enable_keepalive = true)
+     : HTTPClient(std::move(user_agent), enable_cookies, enable_keepalive)
    {
      auto ua_text = from_utf8(getUserAgent());
      // Use WinHttpOpen to obtain a session handle.
@@ -405,6 +405,6 @@ protected:
   
 
 std::unique_ptr<HTTPClient>
-WinHTTPClientFactory::createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
-  return std::unique_ptr<WinHTTPClient>(new WinHTTPClient(_user_agent, _enable_cookies, _enable_keepalive));
+WinHTTPClientFactory::createClient2(std::string user_agent, bool enable_cookies, bool enable_keepalive) {
+  return std::make_unique<WinHTTPClient>(std::move(user_agent), enable_cookies, enable_keepalive);
 }

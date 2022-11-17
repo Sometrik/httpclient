@@ -1,3 +1,4 @@
+
 #include "CurlClient.h"
 
 #include "BasicAuth.h"
@@ -90,9 +91,9 @@ static long long get_current_time_ms() {
 
 class CurlClient : public HTTPClient {
  public:
-  CurlClient(const std::string & _interface, const std::string & _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true)
-    : HTTPClient(_user_agent, _enable_cookies, _enable_keepalive),
-      interface_name(_interface)
+  CurlClient(std::string _interface, std::string _user_agent, bool _enable_cookies = true, bool _enable_keepalive = true)
+    : HTTPClient(std::move(_user_agent), _enable_cookies, _enable_keepalive),
+      interface_name(std::move(_interface))
   {
     assert(is_initialized);
   }
@@ -407,8 +408,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
 std::unique_ptr<HTTPClient>
-CurlClientFactory::createClient2(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive) {
-  return std::unique_ptr<CurlClient>(new CurlClient("", _user_agent, _enable_cookies, _enable_keepalive));
+CurlClientFactory::createClient2(std::string user_agent, bool enable_cookies, bool enable_keepalive) {
+  return std::unique_ptr<CurlClient>(new CurlClient("", std::move(user_agent), enable_cookies, enable_keepalive));
 }
 
 static void lock_cb(CURL *handle, curl_lock_data data, curl_lock_access access, void *userptr) {
