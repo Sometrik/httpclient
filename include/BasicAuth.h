@@ -11,7 +11,7 @@ class BasicAuth : public Authorization {
   const std::string & getUsername() const { return username; }
   const std::string & getPassword() const { return password; }
   
-  std::string createHeader() const {
+  std::string createHeader() const override {
     std::string userpassword = username + ":" + password;
     std::string encodedAuth = Base64::encode(userpassword, 0, 1000);
     return "Basic " + encodedAuth;
