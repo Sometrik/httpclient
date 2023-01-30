@@ -16,6 +16,7 @@
 #include <VersionHelpers.h>
 
 using namespace std;
+using namespace httpclient;
 
 static inline wstring from_utf8(const std::string & s) {
   std::unique_ptr<wchar_t[]> tmp(new wchar_t[s.size() + 1]);

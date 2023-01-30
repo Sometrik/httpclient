@@ -5,6 +5,7 @@
 #include <memory>
 
 using namespace std;
+using namespace httpclient;
 
 static jbyteArray convertToByteArray(JNIEnv * env, const std::string & s) {
   const jbyte * pNativeMessage = reinterpret_cast<const jbyte*>(s.c_str());

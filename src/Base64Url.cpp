@@ -33,6 +33,7 @@
 #include <string>
 
 using namespace std;
+using namespace httpclient;
 
 // Base64url encoding table
 static const char base64urlEncTable[64] =

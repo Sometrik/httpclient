@@ -1,5 +1,7 @@
 #include "FNV.h"
 
+using namespace httpclient;
+
 #define HAVE_64BIT_LONG_LONG
 
 /*

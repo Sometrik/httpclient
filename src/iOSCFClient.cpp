@@ -26,6 +26,7 @@ static long long get_current_time_ms() {
 }
 
 using namespace std;
+using namespace httpclient;
 
 class iOSCFClient : public HTTPClient {
  public:

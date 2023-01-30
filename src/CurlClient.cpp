@@ -11,6 +11,7 @@
 #include <pthread.h>
 
 using namespace std;
+using namespace httpclient;
 
 #include <curl/curl.h>
 #include <sys/time.h>
@@ -467,3 +468,7 @@ CurlClientFactory::globalCleanup() {
   kill_locks();
 #endif
 }
+
+void __attribute__ ((constructor)) do_global_init() {
+  CurlClientFactory::globalInit();
+};

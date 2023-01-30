@@ -6,6 +6,7 @@ static char alphabet1[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0
 static char alphabet2[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
  
 using namespace std;
+using namespace httpclient;
 
 string
 Base64::encode(const unsigned char * input, size_t length, const char * indent, int max_line_length) {

@@ -3,18 +3,20 @@
 
 #include "Authorization.h"
 
-class BearerAuth : public Authorization {
-public:
-  BearerAuth(const std::string & _data) : data(_data) { }
-
-  std::string createHeader() const { 
-    std::string s = "Bearer ";
-    s += data;
-    return s;
-  }
-
-private:
-  std::string data;
+namespace httpclient {
+  class BearerAuth : public Authorization {
+  public:
+    BearerAuth(const std::string & _data) : data(_data) { }
+    
+    std::string createHeader() const { 
+      std::string s = "Bearer ";
+      s += data;
+      return s;
+    }
+    
+  private:
+    std::string data;
+  };
 };
 
 #endif

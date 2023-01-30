@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 
 using namespace std;
+using namespace httpclient;
 
 class iOSClient : public HTTPClient {
  public:

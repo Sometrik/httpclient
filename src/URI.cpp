@@ -13,6 +13,7 @@
 #include "FNV.h"
 
 using namespace std;
+using namespace httpclient;
 
 static size_t split(const string & line, back_insert_iterator< vector<string> > backiter, char delimiter) {
   unsigned int n = 0;

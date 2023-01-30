@@ -10,6 +10,7 @@
 #include <sys/time.h>
 
 using namespace std;
+using namespace httpclient;
 
 static time_t get_current_time() {
   struct timeval tv;
