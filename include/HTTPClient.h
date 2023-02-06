@@ -10,7 +10,7 @@
 #include <string>
 #include <memory>
 
-namespace httpclient {
+namespace httpclient {  
   class HTTPClient {
   public:
     HTTPClient(const std::string & _user_agent, bool _enable_cookies, bool _enable_keepalive)
@@ -25,7 +25,7 @@ namespace httpclient {
     HTTPClient & operator=(const HTTPClient & other) = delete;
     
     HTTPResponse Post(const std::string & uri, const std::string & data) {
-      HTTPRequest req(HTTPRequest::POST, uri);
+      HTTPRequest req(Method::POST, uri);
       req.setContent(data);
       req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
       req.setConnectTimeout(getConnectTimeout());
@@ -37,7 +37,7 @@ namespace httpclient {
     }
 
     HTTPResponse Post(const std::string & uri, const std::string & data, const Authorization & auth) {
-      HTTPRequest req(HTTPRequest::POST, uri);
+      HTTPRequest req(Method::POST, uri);
       req.setContent(data);
       req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
       req.setConnectTimeout(getConnectTimeout());
@@ -49,7 +49,7 @@ namespace httpclient {
     }
   
     void Post(const std::string & uri, const std::string & data, const Authorization & auth, HTTPClientInterface & callback) {
-      HTTPRequest req(HTTPRequest::POST, uri);
+      HTTPRequest req(Method::POST, uri);
       req.setContent(data);
       req.setContentType("application/x-www-form-urlencoded;charset=UTF-8");
       req.setConnectTimeout(getConnectTimeout());
@@ -62,7 +62,7 @@ namespace httpclient {
       std::string uri2 = uri;
       uri2 += '?';
       uri2 += data;
-      HTTPRequest req(HTTPRequest::GET, uri2);
+      HTTPRequest req(Method::GET, uri2);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());
       req.setConnectionTimeout(getConnectionTimeout());
@@ -73,7 +73,7 @@ namespace httpclient {
       std::string uri2 = uri;
       uri2 += '?';
       uri2 += data;
-      HTTPRequest req(HTTPRequest::GET, uri2);
+      HTTPRequest req(Method::GET, uri2);
       req.setFollowLocation(follow_location);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());
@@ -87,7 +87,7 @@ namespace httpclient {
       std::string uri2 = uri;
       uri2 += '?';
       uri2 += data;
-      HTTPRequest req(HTTPRequest::GET, uri2);
+      HTTPRequest req(Method::GET, uri2);
       req.setFollowLocation(follow_location);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());
@@ -101,7 +101,7 @@ namespace httpclient {
       std::string uri2 = uri;
       uri2 += '?';
       uri2 += data;
-      HTTPRequest req(HTTPRequest::GET, uri2);
+      HTTPRequest req(Method::GET, uri2);
       req.setFollowLocation(follow_location);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());
@@ -110,7 +110,7 @@ namespace httpclient {
     }
 
     HTTPResponse Get(const std::string & uri, bool follow_location = true) {
-      HTTPRequest req(HTTPRequest::GET, uri);
+      HTTPRequest req(Method::GET, uri);
       req.setFollowLocation(follow_location);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());
@@ -121,7 +121,7 @@ namespace httpclient {
     }
   
     HTTPResponse Get(const std::string & uri, const Authorization & auth, bool follow_location = true) {
-      HTTPRequest req(HTTPRequest::GET, uri);
+      HTTPRequest req(Method::GET, uri);
       req.setFollowLocation(follow_location);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());
@@ -132,7 +132,7 @@ namespace httpclient {
     }
 
     void Get(const std::string & uri, HTTPClientInterface & callback, bool follow_location = true) {
-      HTTPRequest req(HTTPRequest::GET, uri);
+      HTTPRequest req(Method::GET, uri);
       req.setFollowLocation(follow_location);
       req.setConnectTimeout(getConnectTimeout());
       req.setReadTimeout(getReadTimeout());

@@ -232,7 +232,7 @@ class WinHTTPClient : public HTTPClient {
       
       wstring request_type;
       bool has_data = true;
-      switch (req.getType()) {
+      switch (req.getMethod()) {
       case HTTPRequest::GET:
 	request_type = L"GET";
 	has_data = false;
@@ -289,7 +289,7 @@ class WinHTTPClient : public HTTPClient {
 	  combined_headers[hd.first] = hd.second;
 	}
 	  
-	if (req.getType() == HTTPRequest::POST || req.getType() == HTTPRequest::OPTIONS) {
+	if (req.getMethod() == HTTPRequest::POST || req.getMethod() == HTTPRequest::OPTIONS) {
 	  if (!req.getContentType().empty()) {
 	    combined_headers["Content-Type"] = req.getContentType();
 	  }

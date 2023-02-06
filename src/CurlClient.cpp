@@ -125,8 +125,8 @@ class CurlClient : public HTTPClient {
     //   assert(0);
     // }
 
-    struct curl_slist * headers = 0;
-    if (req.getType() == HTTPRequest::POST || req.getType() == HTTPRequest::OPTIONS) {
+    struct curl_slist * headers = nullptr;
+    if (req.getMethod() == Method::POST || req.getMethod() == Method::OPTIONS) {
       if (!req.getContentType().empty()) {
 	string h = "Content-type: ";
 	h += req.getContentType();
@@ -164,7 +164,7 @@ class CurlClient : public HTTPClient {
       headers = curl_slist_append(headers, s.c_str());
     }
     
-    if (req.getType() == HTTPRequest::POST || req.getType() == HTTPRequest::OPTIONS) {
+    if (req.getMethod() == Method::POST || req.getMethod() == Method::OPTIONS) {
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 0);
       curl_easy_setopt(curl, CURLOPT_POST, 1);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, req.getContent().size());
@@ -173,12 +173,12 @@ class CurlClient : public HTTPClient {
       curl_easy_setopt(curl, CURLOPT_POST, 0);
       curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
     }
-    if (req.getType() == HTTPRequest::OPTIONS) {
+    if (req.getMethod() == Method::OPTIONS) {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "OPTIONS");
     } else {
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, nullptr);
     }
-    if (req.useHTTP2()) {
+    if (req.useHTTP2() && 0) {
       curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE); // CURL_HTTP_VERSION_2TLS); // CURL_HTTP_VERSION_2_0);
       curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
     } else {
@@ -211,7 +211,7 @@ class CurlClient : public HTTPClient {
      
     auto ret = curl_easy_perform(curl);
     if (ret != CURLE_OK) {
-      size_t len = strlen(errbuf);
+      auto len = strlen(errbuf);
       if (len) callback.handleErrorText(errbuf);
       else {
 	callback.handleErrorText(curl_easy_strerror(ret));

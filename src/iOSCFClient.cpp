@@ -77,7 +77,7 @@ class iOSCFClient : public HTTPClient {
     }
     
     CFHTTPMessageRef cfHttpReq;
-    if (req.getType() == HTTPRequest::POST) {
+    if (req.getMethod() == HTTPRequest::POST) {
       cfHttpReq = CFHTTPMessageCreateRequest(kCFAllocatorDefault, CFSTR("POST"), cfUrl, kCFHTTPVersion1_1);
 
       combined_headers["Content-Length"] = to_string(req.getContent().size());

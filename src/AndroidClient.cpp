@@ -152,7 +152,7 @@ public:
       combined_headers[hd.first] = hd.second;
     }
     combined_headers["User-Agent"] = user_agent;
-    if (req.getType() == HTTPRequest::POST && !req.getContentType().empty()) {
+    if (req.getMethod() == HTTPRequest::POST && !req.getContentType().empty()) {
       combined_headers["Content-Type"] = req.getContentType();
     }
     for (auto & hd : req.getHeaders()) {
@@ -170,14 +170,15 @@ public:
       env->DeleteLocalRef(secondHeader);
     }
 
-    env->CallVoidMethod(connection, cache->setDoOutputMethod, req.getType() == HTTPRequest::POST);
-    jstring jTypeString = env->NewStringUTF(req.getTypeString());
+    env->CallVoidMethod(connection, cache->setDoOutputMethod, req.getMethod() == HTTPRequest::POST);
+    auto method_text = to_string(req.getMethod());
+    jstring jTypeString = env->NewStringUTF(method_text.c_str());
     env->CallVoidMethod(connection, cache->setRequestMethod, jTypeString);
     env->DeleteLocalRef(jTypeString);
 
     bool connection_failed = false;
     
-    if (req.getType() == HTTPRequest::POST) {
+    if (req.getMethod() == HTTPRequest::POST) {
       env->CallVoidMethod(connection, cache->setFixedLengthStreamingModeMethod, (int)req.getContent().size());
       jobject outputStream = env->CallObjectMethod(connection, cache->getOutputStreamMethod);
       if (env->ExceptionCheck()) {

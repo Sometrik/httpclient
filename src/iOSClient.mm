@@ -51,7 +51,7 @@ class iOSClient : public HTTPClient {
         [request setValue:v forHTTPHeaderField:n];
     }
   
-    if (req.getType() == HTTPRequest::POST) {
+    if (req.getMethod() == HTTPRequest::POST) {
       [request setHTTPMethod: @"POST"];
       NSString *post_size = [NSString stringWithFormat:@"%d", (int)req.getContent().size()];
       [request setValue:post_size forHTTPHeaderField:@"Content-Length"];

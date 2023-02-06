@@ -5,63 +5,61 @@
 #include <map>
 
 namespace httpclient {
+  enum class Method {
+    GET = 1,
+    POST,
+    // PUT,
+    // DELETE,
+    OPTIONS
+  };
+
+  static inline std::string to_string(Method method) {
+    switch (method) {
+    case Method::GET: return "GET";
+    case Method::POST: return "POST";
+    case Method::OPTIONS: return "OPTIONS";
+    }
+    return "";
+  }
+
   class HTTPRequest {
   public:
-    enum RequestType { 
-      GET = 1,
-      POST,
-      // PUT,
-      // DELETE,
-      OPTIONS
-    };
-
-    HTTPRequest(RequestType _type, const std::string & _uri) : type(_type), uri(_uri) { }
-
-    const char * getTypeString() const {
-      switch (type) {
-      case GET: return "GET";
-      case POST: return "POST";
-	// case PUT: return "PUT";
-	// case DELETE: return "DELETE";
-      case OPTIONS: return "OPTIONS";
-      }
-      return "";
-    }
+    HTTPRequest(Method method, std::string uri) : method_(method), uri_(std::move(uri)) { }
   
-    const RequestType getType() const { return type; }
-    const std::string & getURI() const { return uri; }
-    const std::string & getContent() const { return content; }
-    const std::string & getContentType() const { return content_type; }
-    bool getFollowLocation() const { return follow_location; }
-    int getConnectTimeout() const { return connect_timeout; }
-    int getReadTimeout() const { return read_timeout; }
-    int getConnectionTimeout() const { return connection_timeout; }
-    bool useHTTP2() const { return use_http2; }
-    const std::map<std::string, std::string> & getHeaders() const { return headers; }
+    const Method getMethod() const { return method_; }
+    const std::string & getURI() const { return uri_; }
+    const std::string & getContent() const { return content_; }
+    const std::string & getContentType() const { return content_type_; }
+    bool getFollowLocation() const { return follow_location_; }
+    int getConnectTimeout() const { return connect_timeout_; }
+    int getReadTimeout() const { return read_timeout_; }
+    int getConnectionTimeout() const { return connection_timeout_; }
+    bool useHTTP2() const { return use_http2_; }
+    const std::map<std::string, std::string> & getHeaders() const { return headers_; }
   
-    void setContent(const std::string & _content) { content = _content; }
-    void setContentType(const std::string & _content_type) { content_type = _content_type; }
+    void setContent(std::string content) { content_ = std::move(content); }
+    void setContentType(std::string content_type) { content_type_ = std::move(content_type); }
 
-    void setFollowLocation(bool f) { follow_location = f; }
-    void setConnectTimeout(int t) { connect_timeout = t; }
-    void setReadTimeout(int t) { read_timeout = t; }
-    void setConnectionTimeout(int t) { connection_timeout = t; }
-    void setUseHTTP2(bool t) { use_http2 = t; }
+    void setFollowLocation(bool f) { follow_location_ = f; }
+    void setConnectTimeout(int t) { connect_timeout_ = t; }
+    void setReadTimeout(int t) { read_timeout_ = t; }
+    void setConnectionTimeout(int t) { connection_timeout_ = t; }
+    void setUseHTTP2(bool t) { use_http2_ = t; }
 
-    void setHeaders(const std::map<std::string, std::string> & _headers) { headers = _headers; }
+    void setHeaders(std::map<std::string, std::string> headers) { headers_ = std::move(headers); }
     void addHeader(const std::string & name, const std::string & value) {
-      headers[name] = value;
+      headers_[name] = value;
     }
 
   private:
-    RequestType type;
-    std::string uri;
-    std::string content;
-    std::string content_type;
-    std::map<std::string, std::string> headers; 
-    bool follow_location = true;
-    int connect_timeout = 0, read_timeout = 0, connection_timeout = 0;
-    bool use_http2 = false;
+    Method method_;
+    std::string uri_;
+    std::string content_;
+    std::string content_type_;
+    std::map<std::string, std::string> headers_; 
+    bool follow_location_ = true;
+    int connect_timeout_ = 0, read_timeout_ = 0, connection_timeout_ = 0;
+    bool use_http2_ = false;
   };
 };
 
