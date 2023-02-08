@@ -13,6 +13,7 @@ namespace httpclient {
     OPTIONS
   };
 
+  // string values may not be altered since they are used in the implementations
   static inline std::string to_string(Method method) {
     switch (method) {
     case Method::GET: return "GET";
