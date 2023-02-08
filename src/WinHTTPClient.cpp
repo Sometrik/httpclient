@@ -230,20 +230,8 @@ class WinHTTPClient : public HTTPClient {
       // WINHTTP_OPTION_RESOLVE_TIMEOUT (ms)
       // WINHTTP_OPTION_SEND_TIMEOUT (ms)
       
-      wstring request_type;
-      bool has_data = true;
-      switch (req.getMethod()) {
-      case HTTPRequest::GET:
-	request_type = L"GET";
-	has_data = false;
-	break;
-      case HTTPRequest::POST:
-	request_type = L"POST";
-	break;
-      case HTTPRequest::OPTIONS:
-	request_type = L"OPTIONS";
-	break;
-      }    
+      auto request_type = from_utf8(to_string(req.getMethod()));
+      auto has_data = req.getMethod() != Method::GET;
 
       DWORD dwFlags = WINHTTP_FLAG_ESCAPE_DISABLE | WINHTTP_FLAG_ESCAPE_DISABLE_QUERY;
       if (is_secure) dwFlags |= WINHTTP_FLAG_SECURE;
@@ -289,14 +277,12 @@ class WinHTTPClient : public HTTPClient {
 	  combined_headers[hd.first] = hd.second;
 	}
 	  
-	if (req.getMethod() == HTTPRequest::POST || req.getMethod() == HTTPRequest::OPTIONS) {
-	  if (!req.getContentType().empty()) {
-	    combined_headers["Content-Type"] = req.getContentType();
-	  }
+	if (has_data && !req.getContentType().empty()) {
+	  combined_headers["Content-Type"] = req.getContentType();
 	}
 
-	const BasicAuth * basic = dynamic_cast<const BasicAuth *>(&auth);
-	if (basic) {
+	auto basic_auth = dynamic_cast<const BasicAuth *>(&auth);
+	if (basic_auth) {
 	  // FIXME: implement
 	} else {
 	  string auth_header = auth.createHeader();
