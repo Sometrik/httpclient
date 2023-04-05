@@ -343,7 +343,7 @@ CurlClient::progress_func(void * clientp, double dltotal, double dlnow, double u
     return 1;
   } else if (context->prev_idle_time + 1000 <= current_time_ms) {
     context->prev_idle_time = current_time_ms;
-    HTTPClientInterface * callback = context->callback;
+    auto callback = context->callback;
     assert(callback);
     return callback->onIdle() ? 0 : 1;
   } else {
