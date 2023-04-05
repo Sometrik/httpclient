@@ -185,6 +185,11 @@ class WinHTTPClient : public HTTPClient {
 #endif
    }
 
+  WinHTTPClient(const WinHTTPClient & other) = delete;
+  WinHTTPClient(WinHTTPClient && other) = delete;
+  WinHTTPClient & operator =(const WinHTTPClient & other) = delete;
+  WinHTTPClient & operator =(WinHTTPClient && other) = delete;
+  
   ~WinHTTPClient() {
     if (session_) {
       WinHttpCloseHandle(session_);
@@ -341,7 +346,7 @@ class WinHTTPClient : public HTTPClient {
 	    callback.handleErrorText("Failed to get headers: no headers");
 	    terminate = true;
 	  }
-	  
+	 
 	  while (!terminate) {
 	    // Check for available data to get data size in bytes
 	    DWORD dwSize = 0;
@@ -357,15 +362,24 @@ class WinHTTPClient : public HTTPClient {
 	    // Read data from server
 	    DWORD dwDownloaded = 0;
 	    if (WinHttpReadData(hRequest, outBuffer.get(), dwSize, &dwDownloaded)) {
-	      bool r = callback.handleChunk(std::string_view(outBuffer.get(), dwDownloaded));
-	      if (!r) break;
-	    }
-	    else {
+	      auto r = callback.handleChunk(std::string_view(outBuffer.get(), dwDownloaded));
+	      if (!r) {
+		callback.handleResultCode(0);
+		break;
+	      }
+	    } else {
+	      callback.handleResultCode(0);
 	      break;
 	    }
 
-	    if (!dwDownloaded) break;
-	    if (!callback.onIdle()) break;
+	    if (!dwDownloaded) {
+	      callback.handleResultCode(0);
+	      break;
+	    }
+	    if (!callback.onIdle()) {
+	      callback.handleResultCode(0);
+	      break;
+	    }
 	  }
 
 	  callback.handleDisconnect();
