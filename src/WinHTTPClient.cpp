@@ -368,12 +368,12 @@ class WinHTTPClient : public HTTPClient {
 		break;
 	      }
 	    } else {
-	      callback.handleResultCode(0);
+	      callback.handleResultCode(500);
 	      break;
 	    }
 
 	    if (!dwDownloaded) {
-	      callback.handleResultCode(0);
+	      callback.handleResultCode(500);
 	      break;
 	    }
 	    if (!callback.onIdle()) {
