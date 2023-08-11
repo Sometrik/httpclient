@@ -232,6 +232,7 @@ class CurlClient : public HTTPClient {
     curl_easy_setopt(curl, CURLOPT_USERPWD, 0);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 0);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, 0);
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, 0);
   }
   
   void clearCookies() override {
