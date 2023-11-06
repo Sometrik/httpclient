@@ -31,6 +31,7 @@
 #include "Base64Url.h"
 
 #include <string>
+#include <cstdint>
 
 using namespace std;
 using namespace httpclient;
